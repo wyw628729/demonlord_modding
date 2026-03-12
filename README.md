@@ -21,8 +21,8 @@ Mod 的原理很简单：把同名 PNG 放到指定文件夹 → 游戏扫描并
 ```txt
 MyMod/
   UnitSprites/            (进行图片替换的文件夹名称，固定不变)
-    <UnitType>/           (要替换的单位id，纯数字，具体见附带的单位id表格，理论上所有你看见的游戏内的单位/场景都能修改)
-      <SpriteKey>.png    （要替换的表情key，具体见附带的key名称表格）
+    <UnitType>/           (要替换的单位id，纯数字，具体见表格UnitConfig_SpriteKeys.csv，理论上所有你看见的游戏内的单位/场景都能修改)
+      <SpriteKey>.png    （要替换的表情key，具体见表格UnitConfig_SpriteKeys.csv）
   preview.png            （正方形的预览图，建议分辨率 256*256）
   ```
 
@@ -39,9 +39,9 @@ LuLuMod/
     
 
 ## 3. 文件与命名规则
-`<UnitType>`：单位类型（要替换的单位id，纯数字，具体见附带的ID与KEY表格，理论上所有你看见的游戏内的单位/场景都能修改）
+`<UnitType>`：单位类型（要替换的单位id，纯数字，具体见附带的ID与KEY表格UnitConfig_SpriteKeys.csv）
 
-`<SpriteKey>`：图片 key（要替换的表情key，具体见附带的ID与KEY表格）
+`<SpriteKey>`：图片 key（要替换的表情key，具体见附带的ID与KEY表格UnitConfig_SpriteKeys.csv）
 
 > 图片大小一般来说建议128*128，可以根据实际情况调整
 > 
