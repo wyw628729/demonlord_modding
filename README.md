@@ -1,53 +1,82 @@
-# 《卡片魔王·只剩个头！》Workshop说明
+# 《卡片魔王·只剩个头！》Mod 说明
 
 本游戏当前支持两类 Mod：
 
 1. **图片替换 Mod**
 2. **代码 Mod**
 
-如果你只是想换角色贴图、表情、场景图，做图片 Mod 就够了。  
-如果你想改一些数据/调用方法，例如“初始贴纸数量更多”“初始攻击力更高”，可以使用代码 Mod
+如果你只是想替换角色立绘、表情、场景贴图等内容，使用图片替换 Mod 即可。  
+如果你想修改数据、注册事件、调用游戏中的方法，则需要使用代码 Mod。
 
 ---
 
 ## 1. Mod 会从哪里加载？
 
-游戏会扫描并加载：
+游戏会扫描并加载以下位置的 Mod：
 
-- **Steam 创意工坊**：你订阅的 Workshop 物品安装目录
-- **本地 Mod**：`LocalMods` 文件夹
+- **Steam 创意工坊**：你订阅的 Workshop 物品目录
+- **本地 Mod**：`LocalMods` 文件夹（一般在AppData\LocalLow\YuWave\DemonLordJustABlock\LocalMods）
 
-在游戏内【模组】界面可以对每个 Mod **启用 / 关闭**。
-
-> 部分图片或代码改动可能需要 **重启游戏** 才会完全生效。
+你可以在游戏内的【模组】界面中对每个 Mod 进行**启用 / 禁用**。
 
 ---
 
-## 2. 图片替换 Mod
-这个mod理论上允许你替换看见到的所有贴图，原理很简单，把对应图片放进对应文件夹即可
+## 2. Mod 文件夹基础结构
 
-### 2.1 文件夹结构
+一个完整的 Mod 文件夹通常如下：
+
+```txt
+MyMod/
+  mod.json
+  preview.png
+  UnitSprites/        （可选：图片替换 Mod）
+  CodeMods/           （可选：代码 Mod）
+```
+
+### 2.1 必要文件
+
+- `mod.json`  
+  Mod 的基础信息文件，用于填写名称、作者、描述等内容。
+
+- `preview.png`  
+  Mod 预览图。建议使用正方形图片，推荐分辨率为 `256×256`。
+
+一个 Mod 可以只包含图片替换，也可以只包含代码，或者两者同时包含。
+
+---
+
+## 3. 图片替换 Mod
+
+图片替换 Mod 的原理很简单：  
+把对应命名的 PNG 文件放入指定文件夹，游戏扫描后就会覆盖原图片。
+
+理论上，只要游戏中存在对应资源键，大多数可见贴图都可以被替换。
+
+### 3.1 文件夹结构
+
 - [单位 ID 与 SpriteKey 对照表：UnitConfig_SpriteKeys.csv](./UnitConfig_SpriteKeys.csv)
 
 推荐结构如下：
-```txt
-MyMod/  
-  mod.json               （对该mod的详情描述，包括名称作者描述等）
-  preview.png            （正方形的预览图，建议分辨率 256*256）
-  UnitSprites/            (进行图片替换的文件夹名称，固定不变)
-    <UnitType>/           (要替换的单位id，纯数字，具体见表格UnitConfig_SpriteKeys.csv，理论上所有你看见的游戏内的单位/场景都能修改)
-      <SpriteKey>.png    （要替换的表情key，具体见表格UnitConfig_SpriteKeys.csv）
-  ```
-> 特殊的，一些没有id的图片（例如色欲挑战的图片）可以直接放在UnitSprites/文件夹下面
-> 
-> 图片大小一般来说建议128*128，可以根据实际情况调整
-> 
-> ID和名字不匹配就不会生效。
-> 
-> 同一张图如果被多个 Mod 替换：后加载的覆盖前加载的。
 
-### 2.2 结构示例
-一个示例的结构是：（把露露改成想要的样子）
+```txt
+MyMod/
+  mod.json
+  preview.png
+  UnitSprites/           （`UnitSprites` 文件夹名称是固定的，用于读取）
+    <UnitType>/          （单位 ID，通常是纯数字）
+      <SpriteKey>.png    （为图片的key名，需与表格中的key名完全一致）
+```
+> 注意：
+> - 图片推荐格式：`PNG`
+> - 推荐尺寸：通常可从 `128×128` 开始，根据实际资源调整
+
+### 3.2 特殊图片
+
+部分图片不属于某个单位 ID，例如某些独立 UI 图或特殊事件图。  
+这类图片可以直接放在 `UnitSprites/` 根目录下，文件名使用对应资源名即可。
+
+例如，将所有的露露替换（包括色欲挑战）：
+
 ```txt
 LuLuMod/
   UnitSprites/
@@ -58,81 +87,75 @@ LuLuMod/
       default.png
       happy.png
       move.png
-      ....
-
 ```
 
 ---
-## 3. 代码 Mod
-这个mod允许你自己写代码并且在某些时机执行某些操作，例如数据修改，调用方法等
+## 4. 代码 Mod
 
-### 3.1 文件夹结构
+代码 Mod 允许你通过 C# 编写自己的逻辑，并在特定时机执行操作。  
+例如：修改初始数值、调用现有方法、扩展部分游戏行为……
+
+### 4.1 文件夹结构
+
 推荐结构如下：
+
 ```txt
 MyMod/
-  mod.json               （对该mod的详情描述，包括名称作者描述等）
-  preview.png            （正方形的预览图，建议分辨率 256*256）
-  CodeMods/               (进行编码的文件夹名称，固定不变)
-    codemod.json          (编译相关的配置)
-    TestCodeMod.dll      （编译出来的 dll 文件名）
+  mod.json
+  preview.png
+  CodeMods/            （`CodeMods` 文件夹名称是固定的，用于读取）
+    codemod.json       （用于配置dll文件）
+    MyCodeMod.dll    
 ```
 
-### 3.2 codemod.json 写法
+### 4.2 `codemod.json` 配置
+
+示例：
+
 ```txt
-  "dll": "TestCodeMod.dll", （编译出来的 dll 文件名）
-  "entryClass": "TestCodeMod.Main",  （入口类的完整名字 = 命名空间 + 类名）
-  "displayName": "Test Code Mod"  （显示名称）
-```
-
-### 3.3 最小代码示例
-
-下面这个示例会在进入家园后，把贴纸携带上限改成 3：
-```txt
-using UnityEngine;
-
-namespace MyCodeMod
 {
-    public class Main : SimpleModBehaviour
-    {
-        public override void OnModLoaded()
-        {
-            BattleObject.OnAfterHomeDataLoad += OnAfterHomeDataLoad;
-        }
-
-        public override void OnModUnloaded()
-        {
-            BattleObject.OnAfterHomeDataLoad -= OnAfterHomeDataLoad;
-        }
-
-        private void OnAfterHomeDataLoad(BattleObject bo)
-        {
-            bo.maxStickerCarry = 3;
-            Log("已把 maxStickerCarry 改成 3。");
-        }
-    }
+  "dll": "MyCodeMod.dll",             （编译生成的 dll 文件名）
+  "entryClass": "MyCodeMod.Main"      （入口类的完整名称，即 **命名空间 + 类名**）
 }
 ```
 
-### 3.4 如何制作代码 Mod
-#### 3.4.1 新建一个 C# 类库工程
+### 4.3 制作流程
 
-推荐使用：Visual Studio 或 Rider
+先使用Visual Studio新建一个 C# 类库工程
+然后为代码 Mod 工程添加如下引用：
 
-#### 3.4.2 添加引用
-代码 Mod 工程至少需要引用你游戏的这两个 dll：
-Assembly-CSharp.dll
-UnityEngine.CoreModule.dll
+- `Assembly-CSharp.dll`
+- `UnityEngine.CoreModule.dll`
 
-通常可以在游戏打包目录中找到：
-YourGame_Data/Managed/
+通常你可以在游戏目录中找到：
 
-#### 3.4.2 编译 dll
-编译成功后，你会得到：MyCodeMod.dll
+```txt
+DemonLordJustABlock_Data/Managed/
+```
 
-把它和 codemod.json 放进 CodeMods 文件夹即可。
+编译成功后，你会得到类似这样的文件：
+
+```txt
+MyCodeMod.dll
+```
+
+将它与 `codemod.json` 一起放入 `CodeMods` 文件夹中即可进行测试。
+
+推荐先使用本地 Mod 进行测试，确认功能正常后，再整理为 Workshop 版本。
+
+
+### 4.4 接口介绍
+
+- [你可以在这里查看一个简单的代码案例，用于实现玩家初始化王城时，将可携带贴纸数量设置为3](./UnitConfig_SpriteKeys.csv)
+
+你可以在这里查看所有的属性，和他们的含义
+
+如果你需要更多的文档，api介绍，欢迎私信鱼尾，我会及时补充
 
 ---
-## 4.免责声明
-代码 Mod 本质上会执行第三方代码。
-请只安装你信任来源的 Mod。
-使用代码 Mod 可能导致报错、坏档或与其他 Mod 冲突。
+
+## 5. 免责声明
+
+本游戏允许玩家通过 Mod 扩展内容，但不保证所有 Mod 之间完全兼容哦~  
+
+代码 Mod 本质上会执行第三方代码，请只安装你信任来源的 Mod~
