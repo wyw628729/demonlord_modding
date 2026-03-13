@@ -150,7 +150,7 @@ MyCodeMod.dll
 
 - [你可以在这里查看一个简单的代码案例：用于实现玩家初始化王城时，将可携带贴纸数量设置为3](./GuideDocument/TestCodeMod.cs)
 
-- [你可以在这里查看部分常用的属性，和他们的含义] (./GuideDocument/BattleObject_Mod_Variables.csv)
+- [你可以在这里查看部分常用的属性，和他们的含义](./GuideDocument/UnitConfig_SpriteKeys.csv)
 
 - 如果你需要更多的文档，api介绍，欢迎私信鱼尾，我会及时补充
 
