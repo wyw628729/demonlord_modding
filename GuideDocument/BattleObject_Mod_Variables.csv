@@ -1,5 +1,9 @@
 ﻿section,variable_name,type,initial_value,comment
-Mod接口,OnAfterHomeDataLoad,Action<BattleObject>,,用于mod文件进行参数初始化；在 PlayerHomeDataLoad() 中触发
+Mod接口,OnAfterHomeDataLoad,Action<BattleObject>,,在玩家回到王城后触发
+Mod接口,OnLevelStart,Action<BattleObject>,,在玩家新关卡开始时触发
+Mod接口,OnChapterStart,Action<BattleObject>,,在玩家新章节开始时触发
+Mod接口,OnGameStart,Action<BattleObject>,,在玩家新一局开始时触发
+,,,,
 玩家局外属性参数,playerStartAtk,SafeInt,3,玩家初始攻击力
 玩家局外属性参数,playerSkeletonSaveDeadAdd,SafeInt,,玩家其他地方拿到的永久复活加成
 玩家局外属性参数,playerBookSaveDeadAdd,SafeInt,,玩家额外的复活次数
