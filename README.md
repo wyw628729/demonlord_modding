@@ -56,7 +56,7 @@ MyMod/
 
 ### 3.1 文件夹结构
 
-- [单位 ID 与 SpriteKey 对照表：UnitConfig_SpriteKeys.csv](./UnitConfig_SpriteKeys.csv)
+- [单位 ID 与 SpriteKey 对照表：UnitConfig_SpriteKeys.csv](./GuideDocument/UnitConfig_SpriteKeys.csv)
 
 推荐结构如下：
 
@@ -148,9 +148,9 @@ MyCodeMod.dll
 
 ### 4.4 接口介绍
 
-- [你可以在这里查看一个简单的代码案例：用于实现玩家初始化王城时，将可携带贴纸数量设置为3](./TestCodeMod.cs)
+- [你可以在这里查看一个简单的代码案例：用于实现玩家初始化王城时，将可携带贴纸数量设置为3](./GuideDocument/TestCodeMod.cs)
 
-- [你可以在这里查看部分常用的属性，和他们的含义] (./BattleObject_Mod_Variables.csv)
+- [你可以在这里查看部分常用的属性，和他们的含义] (./GuideDocument/BattleObject_Mod_Variables.csv)
 
 - 如果你需要更多的文档，api介绍，欢迎私信鱼尾，我会及时补充
 
