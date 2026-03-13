@@ -1,0 +1,8 @@
+{
+  "title": "测试Mod",
+  "description": "这是一个图片替换+代码测试Mod，可以将露露换成应急食品，并且每次回到王城时，将玩家的可携带贴纸数设置为3",
+  "author": "鱼尾",
+  "version": "1.0.0",
+  "dll": "TestCodeMod.dll",
+  "entryClass": "TestCodeMod.Main",
+}

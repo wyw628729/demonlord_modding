@@ -1,0 +1,5 @@
+{
+  "dll": "TestCodeMod.dll",
+  "entryClass": "TestCodeMod.Main",
+  "displayName": "Test Code Mod"
+}
