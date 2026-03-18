@@ -1,4 +1,4 @@
-# Card Demon Lord: Just a Head! Mod Guide
+# Demon Lord: Just a Block! Mod Guide
 
 > [中文说明 / Chinese Version](./README.md)
 
