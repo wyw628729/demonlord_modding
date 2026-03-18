@@ -1,5 +1,8 @@
 # 《卡片魔王·只剩个头！》Mod 说明
 
+> [English Version](./README_EN.md)
+
+
 本游戏当前支持两类 Mod：
 
 1. **图片替换 Mod**
