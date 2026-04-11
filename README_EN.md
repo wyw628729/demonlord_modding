@@ -1,166 +1,91 @@
-# Demon Lord: Just a Block! Mod Guide
+# Cardventure: Just a Head - Mod Guide
 
-> [中文说明 / Chinese Version](./README.md)
+> [中文版本](./README.md)
 
-This game currently supports two types of mods:
 
-1. **Image Replacement Mods**
-2. **Code Mods**
+## Table of Contents
 
-If you only want to replace character portraits, expressions, background textures, or similar visual assets, an image replacement mod is enough.  
-If you want to modify data, register events, or call in-game methods, you will need a code mod.
+- [1. Where are Mods loaded from?](#1-where-are-mods-loaded-from)
+- [2. Basic Mod Folder Structure](#2-basic-mod-folder-structure)
+- [3. Sprite Replacement Mod](#3-sprite-replacement-mod)
+- [4. Ability Mod](#4-ability-mod)
+- [5. Code Mod](#5-code-mod)
+- [6. Disclaimer](#6-disclaimer)
+
+This game currently supports **3 types of Mods**:
+
+1. **Sprite Replacement Mod**
+2. **Ability Mod**
+3. **Code Mod**
+
+- If you only want to replace character sprites, expressions, or scene textures, use a Sprite Replacement Mod.
+- If you want to modify existing abilities or create new ones, use an Ability Mod.
+- If you want to modify data, register events, or call in-game methods, you will need a Code Mod.
 
 ---
 
-## 1. Where are mods loaded from?
+## 1. Where are Mods loaded from?
 
-The game scans and loads mods from the following locations:
+The game will scan and load Mods from the following locations:
 
-- **Steam Workshop**: the Workshop items you have subscribed to
-- **Local Mods**: the `LocalMods` folder (usually located at `AppData\LocalLow\YuWave\DemonLordJustABlock\LocalMods`)
+- **Steam Workshop**: Mods you have subscribed to
+- **Local Mods**: the `LocalMods` folder  
+  (usually located at `AppData\LocalLow\YuWave\DemonLordJustABlock\LocalMods`)
 
-You can **enable / disable** each mod from the in-game **Mods** menu.
+You can **enable / disable** each Mod in the in-game **Mod menu**.
 
 ---
 
-## 2. Basic mod folder structure
+## 2. Basic Mod Folder Structure
 
-- [You can view a simple mod example here](./TestModExample)
+- [You can view a simple Mod example here](./TestModExample)
 
-A complete mod folder usually looks like this:
+A complete Mod folder typically looks like this:
 
 ```txt
 MyMod/
   mod.json
   preview.png
-  UnitSprites/        (optional: image replacement mod)
+  UnitSprites/        (optional: sprite replacement)
   CodeMods/           (optional: code mod)
+  AbilityConfigs/     (optional: ability mod)
 ```
 
-### 2.1 Required files
+### 2.1 Required Files
 
 - `mod.json`  
-  The basic information file for the mod, used to define the name, author, description, and other metadata.
+  Contains basic Mod information such as name, author, and description.
 
 - `preview.png`  
-  The preview image for the mod. A square image is recommended, with a suggested resolution of `256×256`.
+  Preview image of the Mod.  
+  Recommended: square image, 256×256 resolution.
 
-A mod can contain only image replacements, only code, or both.
-
----
-
-## 3. Image replacement mods
-
-Image replacement mods work in a very simple way:  
-place PNG files with the correct names into the designated folders, and the game will scan and override the original images.
-
-In theory, as long as the corresponding asset key exists in the game, most visible textures can be replaced.
-
-### 3.1 Folder structure
-
-- [Unit ID and SpriteKey reference table: UnitConfig_SpriteKeys.csv](./GuideDocument/UnitConfig_SpriteKeys.csv)
-
-Recommended structure:
-
-```txt
-MyMod/
-  mod.json
-  preview.png
-  UnitSprites/           (`UnitSprites` is a fixed folder name used for loading)
-    <UnitType>/          (unit ID, usually numeric)
-      <SpriteKey>.png    (the image key name; it must exactly match the key name in the table)
-```
-
-> Note:
-> - Recommended image format: `PNG`
-> - Recommended size: you can usually start from `128×128` and adjust based on the actual asset
-
-### 3.2 Special images
-
-Some images do not belong to a specific unit ID, such as certain standalone UI graphics or special event images.  
-These can be placed directly in the root directory of `UnitSprites/`, using the corresponding asset name as the filename.
-
-For example, to replace all Lulu-related images (including the Lust Challenge):
-
-```txt
-LuLuMod/
-  UnitSprites/
-    luluHappySprite.png
-    luluAtkSprite.png
-    luluAtk1Sprite.png
-    1102/
-      default.png
-      happy.png
-      move.png
-```
+A Mod can contain only sprites, only code, or a combination of both.
 
 ---
 
-## 4. Code mods
+## 3. Sprite Replacement Mod
 
-Code mods allow you to write your own logic in C# and execute it at specific times.  
-For example: modifying initial values, calling existing methods, or extending certain in-game behaviors.
-
-### 4.1 Folder structure
-
-Recommended structure:
-
-```txt
-MyMod/
-  mod.json
-  preview.png
-  CodeMods/            (`CodeMods` is a fixed folder name used for loading)
-    codemod.json       (used to configure the DLL file)
-    MyCodeMod.dll
-```
-
-### 4.2 `codemod.json` configuration
-
-Example:
-
-```txt
-{
-  "dll": "MyCodeMod.dll",             (the name of the compiled DLL file)
-  "entryClass": "MyCodeMod.Main"      (the full name of the entry class, i.e. **namespace + class name**)
-}
-```
-
-### 4.3 Workflow
-
-First, create a new C# Class Library project in Visual Studio.  
-Then add the following references to your code mod project:
-
-- `Assembly-CSharp.dll`
-- `UnityEngine.CoreModule.dll`
-
-You can usually find them in the game directory here:
-
-```txt
-DemonLordJustABlock_Data/Managed/
-```
-
-After compiling successfully, you will get a file like this:
-
-```txt
-MyCodeMod.dll
-```
-
-Place it together with `codemod.json` in the `CodeMods` folder to test it.
-
-It is recommended to test with a local mod first. After confirming everything works correctly, you can then package it into a Workshop version.
-
-### 4.4 Interface references
-
-- [You can view a simple code example here: when the player initializes the Demon King Castle, set the number of stickers they can carry to 3](./GuideDocument/TestCodeMod.cs)
-
-- [You can view some commonly used properties and their meanings here](./GuideDocument/BattleObject_Mod_Variables.csv)
-
-- If you need more documentation or API references, feel free to message 鱼尾 and I will add them as soon as possible
+The principle is simple:  
+Place PNG files with the correct names into the specified folder, and the game will override the original assets.
 
 ---
 
-## 5. Disclaimer
+## 4. Ability Mod
 
-This game allows players to expand its content through mods, but full compatibility between all mods is not guaranteed.  
+You can now use Mods to:
 
-Code mods execute third-party code by nature, so please only install mods from sources you trust.
+- Override existing abilities
+- Create completely new abilities
+
+---
+
+## 5. Code Mod
+
+Code Mods allow you to write custom logic in C#.
+
+---
+
+## 6. Disclaimer
+
+This game allows Modding, but compatibility between Mods is not guaranteed.
