@@ -1,8 +1,8 @@
 {
   "title": "测试Mod",
-  "description": "这是一个图片替换+代码测试Mod，可以将露露换成应急食品，并且每次回到王城时，将玩家的可携带贴纸数设置为3",
+  "description": "这是一个图片替换+自创能力+代码测试Mod：\n\n1.可以将露露换成应急食品，\n\n2.每次回到王城时，将玩家的可携带贴纸数设置为3，\n\n3.新增一个闪电流的能力：[复仇闪电]：受伤时召唤10道闪电，\n\n4.覆盖一个原有的能力：[魔王兵]：从攻击30次召唤1个小兵 → 攻击20次召唤1个弓箭手",
   "author": "鱼尾",
   "version": "1.0.0",
   "dll": "TestCodeMod.dll",
-  "entryClass": "TestCodeMod.Main",
+  "entryClass": "TestCodeMod.Main"
 }

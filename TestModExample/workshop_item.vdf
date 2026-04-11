@@ -1,0 +1,11 @@
+"workshopitem"
+{
+	"appid"		"3720420"
+	"publishedfileid"		"3687129511"
+	"contentfolder"		"E:\\SteamWorkShop\\TestModExample"
+	"previewfile"		"E:\\SteamWorkShop\\TestModExample\\preview.png"
+	"visibility"		"0"
+	"title"		"Test Mod"
+	"description"		"First workshop test item for full version."
+	"changenote"		"Initial upload"
+}

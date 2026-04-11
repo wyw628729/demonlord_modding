@@ -6,9 +6,11 @@
 本游戏当前支持两类 Mod：
 
 1. **图片替换 Mod**
-2. **代码 Mod**
+2. **能力 Mod**
+3. **代码 Mod**
 
 如果你只是想替换角色立绘、表情、场景贴图等内容，使用图片替换 Mod 即可。  
+如果你想替换已有能力，或者自己新增能力，可以使用能力 Mod。
 如果你想修改数据、注册事件、调用游戏中的方法，则需要使用代码 Mod。
 
 ---
@@ -36,6 +38,7 @@ MyMod/
   preview.png
   UnitSprites/        （可选：图片替换 Mod）
   CodeMods/           （可选：代码 Mod）
+  AbilityConfigs/     （可选：能力 Mod）
 ```
 
 ### 2.1 必要文件
@@ -94,13 +97,98 @@ LuLuMod/
       move.png
 ```
 
+
+## 4. 能力 Mod（替换 / 自创能力）
+
+你现在可以通过 Mod：覆盖游戏中已有的能力、新增一个全新的能力
+
+实现方式很简单：
+只需要在 Mod 里提供一个 AbilityConfigs 文件夹，里面放一个 ModSkillConfigs.csv，再放若干个能力图标即可。
+
+### 4.1 文件夹结构
+
+推荐结构如下：
+
+```txt
+MyAbilityMod/
+  mod.json
+  preview.png
+  AbilityConfigs/   （`AbilityConfigs` 文件夹名称是固定的，用于读取）
+    ModSkillConfigs.csv   （`ModSkillConfigs.csv` 文件名称是固定的，用于读取）
+    unit19001.png   （能力的图标，图标文件建议命名为 unit技能ID.png）
+    unit19002.png
+```
+
+> - 例如，如果你新增了能力 ID 是 19001，并且你在 AbilityConfigs 文件夹里放了这张图：unit19001.png，游戏就会自动把它当作这个能力的图标读取。
+
+
+### 4.2 工作方式
+
+游戏会先读取原版能力表，然后再读取你 Mod 里的 AbilityConfigs/ModSkillConfigs.csv。
+
+> 规则如下：
+> - 如果 Mod 中的能力 ID 已经存在：会覆盖原版能力
+> - 如果 Mod 中的能力 ID 不存在：会新增一个能力
+> - 为了避免冲突，建议大家新增能力时尽量使用一个较大的新 ID，比如大于10000
+
+### 4.3 CSV 格式
+
+能力 Mod 使用的字段，和游戏原版 SkillConfig 完全一致。
+
+你可以直接参考：
+- [示例ModSkillConfigs文件：ModSkillConfigs.csv](./GuideDocument/AbilityConfigs/ModSkillConfigs.csv)
+
+并且我也会附上的当前本地 **SkillConfigs.csv** 供你参考：
+- [本地的SkillConfigs文件：SkillConfigs.csv](./GuideDocument/SkillConfigs.csv)
+
+你只需要按照原表的格式填写即可。
+
+### 4.5 能力字段说明
+
+这里不会把所有字段讲得特别复杂，你可以直接对照本地完整的 SkillConfigs.csv示例文件来看。
+
+> 基础字段
+- **id**：能力的唯一编号。（重复已有 ID = 覆盖原能力，使用新 ID = 新增能力）
+- **type**：能力类型，也就是这个能力具体会做什么，例如：生成炸弹（spawnBomb）、召唤闪电（spawnLightning）、改变参数变量（passive）、other等
+-**trigger**：触发时机，也就是这个能力在什么情况下走冷却、触发效果，比如移动时（move）、关卡开始时（levelStart）、按道具键时（activeSkill）等
+- **cooldownNum**：冷却次数，达到对应次数后，能力才会执行，默认是0。
+- **参数字段**：
+-- paramName1 / param1
+-- paramName2 / param2
+-- paramName3 / param3
+-- 这几组字段是能力的具体参数。
+-- 不同 type 会读取不同参数，所以你通常需要参考原版 SkillConfigs.csv 中同类能力的写法。
+- **持续时间字段**：有些能力会用到持续时间（例如魔神真言能力），有些则不会，如果不需要可以默认
+- **name**：能力名字
+- **description**：能力描述
+- **poolType**：所属能力池 / 流派池，比如炸弹流是1200，不同流派、武器、彩色能力等通常都和它有关
+- **abilityLevel**：稀有度等级，默认是1
+- **chooseMaxTime**：这个能力最多能被选择多少次，默认是无穷
+- **isBase**：是否是某个流派的基础能力，如果不是，那么就需要玩家选到这个流派的基础能力，才会投放它，默认是TRUE
+- **武器通用能力**：这里特指最初幻想武器能否随机到这个锻造能力，默认是FALSE
+- **isInBook**：是否会加入图鉴，默认是TRUE
+- **是否正常投放**：字面意思，能否正常投放，默认是TRUE
+
+
+### 4.6 推荐做法
+
+如果你是第一次尝试能力 Mod，建议这样开始：
+
+> - 先复制一个示例 AbilityConfigs 文件夹
+> - 先试着覆盖一个原版能力
+> - 确认生效后，再尝试新增一个能力
+> - 最后再给它加上自己的图标
+
+
+
+
 ---
-## 4. 代码 Mod
+## 5. 代码 Mod
 
 代码 Mod 允许你通过 C# 编写自己的逻辑，并在特定时机执行操作。  
 例如：修改初始数值、调用现有方法、扩展部分游戏行为……
 
-### 4.1 文件夹结构
+### 5.1 文件夹结构
 
 推荐结构如下：
 
@@ -113,7 +201,7 @@ MyMod/
     MyCodeMod.dll    
 ```
 
-### 4.2 `codemod.json` 配置
+### 5.2 `codemod.json` 配置
 
 示例：
 
@@ -124,7 +212,7 @@ MyMod/
 }
 ```
 
-### 4.3 制作流程
+### 5.3 制作流程
 
 先使用Visual Studio新建一个 C# 类库工程
 然后为代码 Mod 工程添加如下引用：
@@ -149,7 +237,7 @@ MyCodeMod.dll
 推荐先使用本地 Mod 进行测试，确认功能正常后，再整理为 Workshop 版本。
 
 
-### 4.4 接口介绍
+### 5.4 接口介绍
 
 - [你可以在这里查看一个简单的代码案例：用于实现玩家初始化王城时，将可携带贴纸数量设置为3](./GuideDocument/TestCodeMod.cs)
 
@@ -159,7 +247,9 @@ MyCodeMod.dll
 
 ---
 
-## 5. 免责声明
+
+
+## 6. 免责声明
 
 本游戏允许玩家通过 Mod 扩展内容，但不保证所有 Mod 之间完全兼容哦~  
 
