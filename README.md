@@ -6,7 +6,7 @@
 
 ## AI 辅助制作 Mod（推荐）
 
-如果你在使用 [Claude Code](https://claude.ai/code)，可以利用内置的 **cardventure-mod-creator** skill 来辅助制作 Mod。
+如果你在使用 AI:比如[Claude Code](https://claude.ai/code)、Codex、GLM、DeepSeek等等，可以利用内置的 **cardventure-mod-creator** skill 来辅助制作 Mod。
 
 它能帮你：
 - 根据你的想法快速生成 Mod 目录结构和配置文件
