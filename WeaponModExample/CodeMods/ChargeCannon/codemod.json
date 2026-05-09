@@ -1,0 +1,5 @@
+{
+  "dll": "ChargeCannon.dll",
+  "entryClass": "ChargeCannon.Main",
+  "displayName": "Charge Cannon Weapon Mod"
+}

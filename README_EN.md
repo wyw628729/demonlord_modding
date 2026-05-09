@@ -10,13 +10,16 @@
 - [3. Sprite Replacement Mod](#3-sprite-replacement-mod)
 - [4. Ability Mod](#4-ability-mod)
 - [5. Code Mod](#5-code-mod)
-- [6. Disclaimer](#6-disclaimer)
+- [6. Custom Weapon Mod](#6-custom-weapon-mod)
+- [7. Troubleshooting](#7-troubleshooting)
+- [8. Disclaimer](#8-disclaimer)
 
-This game currently supports 3 types of Mods:
+This game currently supports 4 types of Mods:
 
 1. **Sprite Replacement Mod**
 2. **Ability Mod**
 3. **Code Mod**
+4. **Custom Weapon Mod**
 
 - If you only want to replace character sprites, expressions, scene textures, and similar content, a Sprite Replacement Mod is enough.
 - If you want to replace existing abilities or create your own new abilities, you can use an Ability Mod.
@@ -52,11 +55,42 @@ MyMod/
 
 ### 2.1 Required Files
 
-- `mod.json`  
-  The basic information file for the Mod, used to fill in the name, author, description, and other details.
+#### mod.json
 
-- `preview.png`  
-  The preview image for the Mod. A square image is recommended, with a suggested resolution of `256×256`.
+The basic information file for the Mod, used to fill in the name, author, description, and other details.
+
+```json
+{
+  "title": "My Mod",
+  "description": "Mod description",
+  "author": "Author name",
+  "version": "1.0.0"
+}
+```
+
+**Field Description:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `title` | Recommended | Mod title. If missing, falls back to `name` field or directory name |
+| `name` | Fallback | Fallback field for `title`, lower priority than `title` |
+| `description` | Optional | Mod description |
+| `author` | Recommended | Author name |
+| `authorName` | Fallback | Fallback field for `author`, lower priority than `author` |
+| `version` | Optional | Version number |
+
+> **Important Reminder**: Do NOT include `dll` or `entryClass` fields in mod.json! The game does not read Code Mod configuration from mod.json. Code Mod configuration belongs in `CodeMods/codemod.json`.
+
+#### Mod Icon
+
+Mod icon files are placed in the Mod root directory. The game loads them in the following priority order:
+
+1. `icon.png` (highest priority, recommended)
+2. `preview.png`
+3. `thumbnail.png`
+4. `cover.png`
+
+Recommended: use square images, `256×256` resolution, PNG format.
 
 A Mod can contain only sprite replacements, only code, or both at the same time.
 
@@ -156,7 +190,7 @@ I will also provide the current local **SkillConfigs.csv** for reference:
 
 You only need to fill it in according to the original table format.
 
-### 4.5 Ability Field Explanation
+### 4.4 Ability Field Explanation
 
 I will not make every field overly complicated here. You can directly compare them with the complete local `SkillConfigs.csv` example file.
 
@@ -181,7 +215,7 @@ I will not make every field overly complicated here. You can directly compare th
 - **isInBook**: Whether it will be added to the collection book. The default is `TRUE`.
 - **isUnLocked**: Whether it is normally available for distribution. The default is `TRUE`.
 
-### 4.6 Recommended Workflow
+### 4.5 Recommended Workflow
 
 If this is your first time trying an Ability Mod, it is recommended to start like this:
 
@@ -197,29 +231,61 @@ If this is your first time trying an Ability Mod, it is recommended to start lik
 A Code Mod allows you to write your own logic in C# and execute it at specific times.  
 For example: modifying initial values, calling existing methods, expanding some gameplay behavior, and so on.
 
+> **Advanced Example: Custom Weapon Mod**  
+> If you want to create a complete custom weapon with its own skill, exclusive abilities, and independent sprites, refer to [WeaponModExample](./WeaponModExample).  
+> This example demonstrates how to use `WeaponModAPI` to register weapons, implement weapon hooks, configure attack ranges, create weapon-exclusive abilities, and other advanced techniques.
+
 ### 5.1 Folder Structure
 
-The recommended structure is:
+Code Mods support two placement methods:
+
+**Method 1: Directly in CodeMods root directory** (suitable for single Code Mod)
 
 ```txt
 MyMod/
   mod.json
-  preview.png
+  icon.png
   CodeMods/            (`CodeMods` is the fixed folder name used for loading)
     codemod.json       (used to configure the dll file)
     MyCodeMod.dll    
+```
+
+**Method 2: Using subdirectories** (recommended, supports multiple Code Mods in one Mod)
+
+```txt
+MyMod/
+  mod.json
+  icon.png
+  CodeMods/
+    MyCodeMod/         (Code Mod package directory)
+      codemod.json
+      MyCodeMod.dll
+    AnotherCodeMod/    (another Code Mod)
+      codemod.json
+      AnotherCodeMod.dll
 ```
 
 ### 5.2 `codemod.json` Configuration
 
 Example:
 
-```txt
+```json
 {
-  "dll": "MyCodeMod.dll",             (the compiled dll filename)
-  "entryClass": "MyCodeMod.Main"      (the full name of the entry class, that is, **namespace + class name**)
+  "dll": "MyCodeMod.dll",
+  "entryClass": "MyCodeMod.Main",
+  "displayName": "My Cool Mod"
 }
 ```
+
+**Field Description:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dll` | Yes | DLL filename (relative to codemod.json directory) |
+| `entryClass` | Yes | Full entry class name (namespace.classname) |
+| `displayName` | No | Display name, used for logging and GameObject naming. Falls back to class name if not set |
+
+> **Note**: Also supports using `code_mod.json` as the filename, but `codemod.json` is recommended for consistency.
 
 ### 5.3 Workflow
 
@@ -255,7 +321,159 @@ It is recommended to test with a Local Mod first, and after confirming that it w
 
 ---
 
-## 6. Disclaimer
+## 6. Custom Weapon Mod
+
+Custom Weapon Mods are an advanced application of Code Mods, allowing you to create complete weapons with independent skill systems, exclusive abilities, and custom sprites.
+
+### 6.1 Features
+
+- **Complete weapon system**: Register new weapon ID, display name, skill type
+- **Lifecycle hooks**: Equip/unequip, sprite switching, damage modification, hurt/dodge/parry events
+- **Attack range configuration**: Various attack shapes (line, fan, circle), supports piercing, reverse shooting, etc.
+- **Weapon-exclusive abilities**: Use `wp:` prefix to create abilities that only affect this weapon
+- **Dynamic parameter system**: Weapon parameters persist when switching weapons, reset when starting a new run
+
+### 6.2 Complete Example
+
+[WeaponModExample](./WeaponModExample) provides a complete charge cannon weapon example, including:
+
+- Weapon registration and skill system
+- Lifecycle hook implementation (sprite switching, damage bonus)
+- Attack range configuration (line piercing shot)
+- Weapon-exclusive abilities (range +1, max charge layers +1)
+- Complete directory structure and compilation instructions
+
+See [WeaponModExample/README_WeaponMod.md](./WeaponModExample/README_WeaponMod.md) for details
+
+### 6.3 Core API
+
+**Registering a weapon:**
+
+```csharp
+WeaponModAPI.RegisterWeapon(
+    id:           1320,                          // Weapon ID (≥ 1320 to avoid conflicts)
+    displayName:  "Charge Cannon",               // Display name
+    skillType:    "Weapon_ChargeCannon",         // Skill type name
+    skillFactory: () => new Skill_Weapon_ChargeCannon(),
+    defaultParams: new Dictionary<string, float>
+    {
+        { "fireRange",  4f },                    // Default range
+        { "chargeMax",  3f },                    // Default max charge layers
+    },
+    hooks:        new ChargeCannonHooks(),       // Lifecycle hooks
+    spriteKeys:   new[] { "charging11320", "firing1320" },
+    unlockHint:   "From Charge Cannon Mod",
+    isUnLocked:   true
+);
+```
+
+**Lifecycle hooks interface (`IWeaponHooks`):**
+
+```csharp
+public interface IWeaponHooks
+{
+    void OnEquip(int playerIndex);                              // When equipped
+    void OnUnequip(int playerIndex);                            // When unequipped
+    string OnSetSprite(string state, int weaponId);             // Sprite switching
+    int OnAttackOnUnit(UnitObject target, int damage, int distance, int weaponId);  // Attack damage modification
+    bool OnTrySkipButton(int weaponId);                         // E key skip behavior
+    void OnTakeDamage(UnitObject atkUnit, int weaponId);        // When taking damage
+    void OnDodgeOrParry(bool isParry, int weaponId);            // When dodging/parrying
+}
+```
+
+**Attack range configuration:**
+
+```csharp
+profile.primaryAtkRange = new AtkRangeConfig
+{
+    shape         = AtkRangeShape.Line,          // Shape: line
+    rangeKey      = "fireRange",                 // Read range from weaponParams
+    rangeDefault  = 4,                           // Default range 4 tiles
+    startOffset   = 1,                           // Start from 1 tile in front of player
+    piercing      = true,                        // Piercing attack
+};
+```
+
+**Weapon-exclusive abilities (CSV configuration):**
+
+```csv
+id,type,trigger,cooldown,paramName1,param1,paramName2,param2,paramName3,param3,durationTime,name,description,poolType,abilityLevel,chooseMaxTime,allWeaponUse,isBase,isInBook,isUnLocked
+19200,passive,isOnce,0,wp:fireRange,1,,,,,,Extended Barrel,Charge Cannon range +1,1320,2,,,,,
+19201,passive,isOnce,0,wp:chargeMax,1,,,,,,Super Battery,Charge Cannon max charge +1,1320,1,,,,,
+```
+
+> **`wp:` prefix rules**:  
+> - Modifies `weaponParams` (weapon dynamic parameters)
+> - Persists when switching weapons
+> - Cleared when starting a new run
+> - Set poolType to weapon ID (e.g., `1320`) to limit to this weapon only
+
+### 6.4 Sprite Resources
+
+Custom weapon sprites are placed in the `UnitSprites/1000/` directory (**player ID is fixed at 1000**):
+
+```txt
+WeaponModExample/
+  UnitSprites/
+    weapon1320.png              ← Weapon icon
+    1000/                       ← Player form sprites (ID fixed at 1000)
+      default1320.png           ← Default form
+      charging11320.png         ← Charging form
+      firing1320.png            ← Firing form
+```
+
+**Naming convention**: Embed weapon ID in sprite key (e.g., `charging11320`) to avoid sprite conflicts between different weapons.
+
+### 6.5 Best Practices
+
+1. **Use weapon ID ≥ 1320**: Avoid conflicts with vanilla weapons (1300-1318)
+2. **Refer to the complete example**: [WeaponModExample](./WeaponModExample) contains all necessary code and configuration
+3. **Test locally first**: Place the Mod in `LocalMods/` for testing before publishing to the Workshop
+4. **Check logs**: Game logs are located at `AppData\LocalLow\YuWave\DemonLordJustABlock\Player.log` for debugging
+
+---
+
+## 7. Troubleshooting
+
+### TypeLoadException: DefaultInterpolatedStringHandler
+
+**Error message:**
+
+```
+[CodeModRuntime] Load failed
+System.TypeLoadException: Could not resolve type with token 01000011 from typeref
+(expected class 'System.Runtime.CompilerServices.DefaultInterpolatedStringHandler'
+in assembly 'System.Runtime, Version=8.0.0.0, ...)
+```
+
+**Cause:**  
+The Code Mod project targets `net8.0` (or any other .NET 6+), but Unity runs on **Mono**, whose compatibility layer is equivalent to .NET Standard 2.1.  
+When targeting .NET 6+, C# 10 automatically optimizes `$"..."` string interpolation to use `DefaultInterpolatedStringHandler` — a type that does not exist in Unity's Mono runtime, causing the DLL to fail at load time.
+
+**Fix:**  
+Set the `.csproj` target framework to `netstandard2.1`, lower the language version to `9`, and remove `<ImplicitUsings>`:
+
+```xml
+<!-- Before (incorrect) -->
+<PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>10</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+</PropertyGroup>
+
+<!-- After (correct) -->
+<PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9</LangVersion>
+</PropertyGroup>
+```
+
+After recompiling, the DLL will be fully compatible with Unity Mono.
+
+---
+
+## 8. Disclaimer
 
 This game allows players to expand content through Mods, but full compatibility between all Mods is not guaranteed.
 
