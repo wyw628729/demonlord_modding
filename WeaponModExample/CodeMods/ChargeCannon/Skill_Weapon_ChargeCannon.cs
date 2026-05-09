@@ -231,21 +231,27 @@ namespace ChargeCannon
 
             p.SetSprite("firing" + WeaponId);
 
-            // 伤害 = 玩家攻击力（已包含能力加成）× 蓄能层数系数（满蓄=chargeMax）
             int dmg = p.unitAtk * GetChargeMax();
             p.AddDamageRange(tiles, out _, dmg);
             p.AtkFinish("firing" + WeaponId);
 
             firingRoundsLeft--;
-            if (firingRoundsLeft <= 0)
+            bool lastShot = firingRoundsLeft <= 0;
+            if (lastShot) EndFiring();
+
+            // 后坐力：发射后尝试向后退1格（与 Laser 后坐力模式相同）
+            if (p.PlayerNeedMove(-shootDir, 1))
             {
-                EndFiring();
-                p.PlayerAttackOver();
+                p.MoveToPos(-shootDir, 1, 0.5f, default, "no", "no", 0, () =>
+                {
+                    if (lastShot) p.PlayerAttackOver();
+                    else p.PlayerActionOver();
+                });
             }
             else
             {
-                // 还有剩余段数，结束本回合但保持 Firing 状态
-                p.PlayerActionOver();
+                if (lastShot) p.PlayerAttackOver();
+                else p.PlayerActionOver();
             }
         }
 
@@ -261,11 +267,11 @@ namespace ChargeCannon
                 return;
             }
 
-            // 位移 + 回调中恢复瞄准方向 + 发射
+            // 直接用 MoveToPos：isCharging=true 时 isListening=false 已阻止重复输入，
+            // 无需 hasmove 保护；且需要 "no" 结束状态来保持炮管方向，不能走 PlayerMove
             var savedAimDir = fireAimDir;
             p.MoveToPos(moveDir, 1, 1f, default, "move", "no", 0, () =>
             {
-                // 位移完成后恢复开炮方向
                 p.aimDir = savedAimDir;
                 p.ChangeSpriteRotate(savedAimDir.x < 0);
                 ShootOnce(savedAimDir);
@@ -360,7 +366,10 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         private void NormalMove()
         {
-            p.PlayerMove(dir, 1, () => p.PlayerMoveOver());
+            if (p.PlayerNeedMove(dir, 1))
+                p.PlayerMove(dir, 1, () => p.PlayerMoveOver());
+            else
+                p.Attack(dir, 1, 1, default, () => p.PlayerAttackOver());
         }
 
         // ─────────────────────────────────────────────────────────
