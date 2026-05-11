@@ -6,6 +6,8 @@ namespace ChargeCannon
     /// <summary>
     /// 蓄能炮武器技能
     ///
+    /// 继承 Skill_Weapon，实现蓄能炮的完整战斗逻辑。
+    ///
     /// 状态机：Idle → Charging（蓄力中）→ Firing（开火中）→ Idle
     ///
     /// 核心机制：
@@ -13,32 +15,59 @@ namespace ChargeCannon
     ///                             OnInputDir（即本 Skill 的 Execute），让技能完全接管每一格输入。
     ///   p.PlayerActionOver()  ——  结束回合但不算攻击（蓄力/开火维持状态时用）
     ///   p.PlayerAttackOver()  ——  结束回合并算作一次攻击（开火打出伤害后用）
+    ///
+    /// 输入映射：
+    ///   Idle 状态：
+    ///     - 距敌≤3格 + 前进方向键 → 进入 Charging 并蓄力1层
+    ///     - 其他 → 普通移动
+    ///   Charging 状态：
+    ///     - 前进方向键 / E 键 → 蓄力1层
+    ///     - 侧向键 → 转向 + 蓄力1层（差1层满蓄时转向直接开火）
+    ///     - 反方向键 → 取消蓄力并后退
+    ///   Firing 状态：
+    ///     - 前进方向键 → 开火一段（共2段激光）
+    ///     - 侧向键 → 侧方位移后继续开火
+    ///     - 反方向键 → 取消剩余激光并后退
     /// </summary>
     public class Skill_Weapon_ChargeCannon : Skill_Weapon
     {
         // ── 状态机（公开枚举供 Hooks 访问）──────────────────────────
+
+        /// <summary>蓄能炮状态枚举：空闲、蓄力中、开火中</summary>
         public enum CannonMode { Idle, Charging, Firing }
 
+        /// <summary>当前状态，初始为 Idle</summary>
         private CannonMode mode = CannonMode.Idle;
 
         /// <summary>供 ChargeCannonHooks 读取当前模式，用于精灵切换</summary>
         public CannonMode CurrentMode => mode;
 
-        // 当前蓄能层数
+        /// <summary>当前蓄能层数，每层由一次蓄力操作累加</summary>
         private int chargeCount = 0;
 
-        // 开火时锁定的瞄准方向（侧方位移时保持方向不变）
+        /// <summary>开火时锁定的瞄准方向。侧方位移时保持方向不变，确保激光朝原方向发射</summary>
         private Vector2Int fireAimDir;
 
-        // 开火剩余段数
+        /// <summary>开火剩余段数。蓄能炮满蓄后发射2段激光，每段独立计算伤害和后坐力</summary>
         private int firingRoundsLeft = 0;
 
         // ── 内部缓存，由 WeaponModAPI.RegisterWeapon 设置 ─────────
+
+        /// <summary>蓄能炮武器 ID，与注册时一致</summary>
         private const int WeaponId = 1320;
-        private const int MeleeRadius = 2;    // 自动近战检测半径
-        private const int ChargeStartDist = 3; // 距敌几格开始蓄力
+
+        /// <summary>自动近战检测半径（曼哈顿距离）。敌人≤此距离时放弃蓄能炮，切换近战</summary>
+        private const int MeleeRadius = 2;
+
+        /// <summary>距敌几格开始蓄力。敌人在此距离内且按前进方向键时进入蓄力状态</summary>
+        private const int ChargeStartDist = 3;
 
         // ── 公开入口：外部（ChargeCannonHooks）通知 E 键 ────────────
+
+        /// <summary>
+        /// E 键按下回调，由 ChargeCannonHooks.OnTrySkipButton() 调用。
+        /// 蓄力状态下 E 键视为"向前蓄力"操作。
+        /// </summary>
         public void OnEKeyPressed()
         {
             if (p == null) return;
@@ -46,27 +75,48 @@ namespace ChargeCannon
                 DoCharge(p.aimDir);        // E 键当作"向前蓄力"
         }
 
-        /// <summary>供 ChargeCannonHooks 在弹反/闪避时调用，触发蓄力1层</summary>
+        /// <summary>
+        /// 弹反/闪避蓄力回调，由 ChargeCannonHooks.OnDodgeOrParry() 调用。
+        /// 每次弹反/闪避为蓄能炮蓄力1层，可累积至满蓄。
+        /// </summary>
         public void OnDodgeOrParryCharge()
         {
             if (p == null) return;
             if (mode == CannonMode.Idle) EnterCharging();
             if (mode == CannonMode.Charging) DoCharge(p.aimDir);
-            // Firing 状态不响应
+            // Firing 状态不响应弹反/闪避蓄力
         }
 
-        // 初始化时向钩子注入自身引用，使 Hooks 可以访问技能状态
+        /// <summary>
+        /// 技能初始化回调。在技能被创建并绑定到单位时调用。
+        /// 向 ChargeCannonHooks 注入自身引用，使 Hooks 可以访问技能状态。
+        /// </summary>
+        /// <param name="unit">技能持有者单位</param>
+        /// <param name="data">技能运行时数据</param>
+        /// <param name="config">技能静态配置</param>
+        /// <param name="showAbilityUI">是否显示技能 UI</param>
         public override void Init(UnitObjectAbility unit, SkillData data, SkillConfig config, bool showAbilityUI)
         {
             base.Init(unit, data, config, showAbilityUI);
+
+            // 从武器注册表中查找对应 profile，获取 hooks 实例并注入技能引用
             var profile = WeaponProfileRegistry.Get(WeaponId);
             if (profile?.hooks is ChargeCannonHooks hooks)
                 hooks.SetSkill(this);
         }
 
         // ── Skill.Execute 入口 ────────────────────────────────────
-        // 当 isCharging=true 时，每次玩家按方向键 → OnInputDir → Execute
-        // 当 isCharging=false（Idle）时，由系统在"玩家按攻击键或移动键相邻敌人"时调用
+
+        /// <summary>
+        /// 技能执行入口，每次玩家输入方向键时调用。
+        ///
+        /// 调用时机：
+        ///   - isCharging=true 时：每次方向键输入 → OnInputDir → Execute
+        ///   - isCharging=false（Idle）时：由系统在"玩家按攻击键或移动键相邻敌人"时调用
+        ///
+        /// base.Execute 会设置 p（UnitObjectPlayer）和 dir（aimDir）。
+        /// </summary>
+        /// <param name="unitObject">执行技能的单位（玩家）</param>
         public override void Execute(UnitObject unitObject)
         {
             base.Execute(unitObject);
@@ -83,6 +133,7 @@ namespace ChargeCannon
                 return;
             }
 
+            // 根据当前状态分派处理逻辑
             switch (mode)
             {
                 case CannonMode.Idle:    HandleIdle();    break;
@@ -94,6 +145,11 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // Idle 模式：判断是否应该开始蓄力
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Idle 状态处理逻辑。
+        /// 查找最近敌人，如果距离≤3格且按前进方向键则开始蓄力，否则普通移动。
+        /// </summary>
         private void HandleIdle()
         {
             var enemy = BattleObject.Instance.GetNearestEnemy(p.unitPos, p.unitCamp);
@@ -115,6 +171,13 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // Charging 模式
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Charging 状态处理逻辑。
+        /// - 反方向键：取消蓄力并后退
+        /// - 侧向键：转向 + 蓄力1层（差1层满蓄时转向直接开火）
+        /// - 前进方向键：蓄力1层
+        /// </summary>
         private void HandleCharging()
         {
             int chargeMax = GetChargeMax();
@@ -152,6 +215,13 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // Firing 模式
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Firing 状态处理逻辑。
+        /// - 反方向键：取消剩余激光并后退
+        /// - 侧向键：保持瞄准方向不变，位移后继续开火
+        /// - 前进方向键：开火一段
+        /// </summary>
         private void HandleFiring()
         {
             // 反方向键 → 取消剩余激光并后退
@@ -175,18 +245,30 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 蓄力操作
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 进入蓄力状态。设置 mode 为 Charging，标记 isCharging 使引擎将输入派发给本技能。
+        /// </summary>
         private void EnterCharging()
         {
             mode = CannonMode.Charging;
             p.isCharging = true;
         }
 
+        /// <summary>
+        /// 执行一次蓄力操作。
+        /// 累加蓄能层数，切换精灵，增加监听延迟（0.25秒动画时间）。
+        /// 满蓄时自动触发开火，否则结束回合但保持 isCharging 状态。
+        /// </summary>
+        /// <param name="chargeDir">蓄力方向（通常与 aimDir 一致）</param>
         private void DoCharge(Vector2Int chargeDir)
         {
             chargeCount++;
             int chargeMax = GetChargeMax();
 
+            // 切换到蓄力精灵
             p.SetSprite("charging1" + WeaponId);
+            // 增加输入监听延迟，等待蓄力动画播放
             p.listenDelay += 0.25f;
 
             if (chargeCount >= chargeMax)
@@ -203,6 +285,11 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 开火触发
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 触发开火。从 Charging 状态转入 Firing 状态，
+        /// 锁定瞄准方向，设置激光段数为2，并发射第一段。
+        /// </summary>
         private void TriggerFire()
         {
             mode = CannonMode.Firing;
@@ -216,12 +303,22 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 发射一段激光
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 发射一段激光。
+        /// 通过 AtkRangeResolver 计算攻击范围，造成伤害，并施加后坐力（后退1格）。
+        /// 伤害 = 玩家攻击力 × 最大蓄能层数。
+        /// </summary>
+        /// <param name="shootDir">射击方向</param>
         private void ShootOnce(Vector2Int shootDir)
         {
             var profile = WeaponProfileRegistry.Get(WeaponId);
             if (profile == null) { EndFiring(); return; }
 
+            // 从武器参数存储中获取攻击范围配置
             var store = BattleObject.Instance.weaponParams;
+
+            // 根据攻击范围配置、玩家位置和射击方向，计算受影响的格子列表
             var tiles = AtkRangeResolver.Resolve(
                 profile.primaryAtkRange,
                 store,
@@ -229,12 +326,18 @@ namespace ChargeCannon
                 shootDir
             );
 
+            // 切换到开火精灵
             p.SetSprite("firing" + WeaponId);
 
+            // 计算伤害：攻击力 × 最大蓄能层数（满蓄伤害倍率）
             int dmg = p.unitAtk * GetChargeMax();
+
+            // 对范围内所有格子施加伤害
             p.AddDamageRange(tiles, out _, dmg);
+            // 播放攻击完成动画
             p.AtkFinish("firing" + WeaponId);
 
+            // 减少剩余段数
             firingRoundsLeft--;
             bool lastShot = firingRoundsLeft <= 0;
             if (lastShot) EndFiring();
@@ -242,14 +345,16 @@ namespace ChargeCannon
             // 后坐力：发射后尝试向后退1格（与 Laser 后坐力模式相同）
             if (p.PlayerNeedMove(-shootDir, 1))
             {
+                // 可以后退：移动后根据是否最后一段决定结束方式
                 p.MoveToPos(-shootDir, 1, 0.5f, default, "no", "no", 0, () =>
                 {
-                    if (lastShot) p.PlayerAttackOver();
-                    else p.PlayerActionOver();
+                    if (lastShot) p.PlayerAttackOver();  // 最后一段：结束回合并算作攻击
+                    else p.PlayerActionOver();             // 非最后一段：结束回合但保持开火状态
                 });
             }
             else
             {
+                // 无法后退（被阻挡）：原地结束
                 if (lastShot) p.PlayerAttackOver();
                 else p.PlayerActionOver();
             }
@@ -258,6 +363,14 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 侧方位移（Firing 状态）
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Firing 状态下的侧方位移。
+        /// 保持瞄准方向不变，侧向移动1格后继续开火。
+        /// 使用 MoveToPos 而非 PlayerMove，因为 isCharging=true 时 isListening=false
+        /// 已阻止重复输入，且需要 "no" 结束状态来保持炮管方向。
+        /// </summary>
+        /// <param name="moveDir">侧向移动方向</param>
         private void SideMove(Vector2Int moveDir)
         {
             if (!p.PlayerNeedMove(moveDir, 1))
@@ -267,11 +380,13 @@ namespace ChargeCannon
                 return;
             }
 
-            // 直接用 MoveToPos：isCharging=true 时 isListening=false 已阻止重复输入，
-            // 无需 hasmove 保护；且需要 "no" 结束状态来保持炮管方向，不能走 PlayerMove
+            // 保存瞄准方向，移动后恢复
             var savedAimDir = fireAimDir;
+
+            // 侧向移动1格，移动完成后恢复瞄准方向并开火
             p.MoveToPos(moveDir, 1, 1f, default, "move", "no", 0, () =>
             {
+                // 恢复瞄准方向和精灵朝向
                 p.aimDir = savedAimDir;
                 p.ChangeSpriteRotate(savedAimDir.x < 0);
                 ShootOnce(savedAimDir);
@@ -281,6 +396,11 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 转向（蓄力时侧向按键）
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 转向操作。更新玩家瞄准方向和精灵朝向，不产生位移。
+        /// </summary>
+        /// <param name="newDir">新的瞄准方向</param>
         private void TurnTo(Vector2Int newDir)
         {
             p.aimDir = newDir;
@@ -290,12 +410,18 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 取消蓄力
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 取消蓄力状态。重置蓄能层数和模式，恢复默认精灵，
+        /// 尝试后退1格（反方向），无法后退则原地结束回合。
+        /// </summary>
         private void CancelCharge()
         {
             chargeCount = 0;
             mode = CannonMode.Idle;
             p.isCharging = false;
             p.SetSprite("default");
+
             // 后退一格（如果可以）
             if (p.PlayerNeedMove(-p.aimDir, 1))
                 p.PlayerMove(-p.aimDir, 1, () => p.PlayerActionOver());
@@ -306,9 +432,15 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 取消开火
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 取消开火状态。结束剩余激光，尝试后退1格（反方向），
+        /// 无法后退则原地结束回合。
+        /// </summary>
         private void CancelFiring()
         {
             EndFiring();
+
             // 后退一格（如果可以）
             if (p.PlayerNeedMove(-fireAimDir, 1))
                 p.PlayerMove(-fireAimDir, 1, () => p.PlayerActionOver());
@@ -319,6 +451,11 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 结束开火状态（重置）
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 结束开火状态，重置所有战斗状态。
+        /// 清零蓄能层数和剩余段数，恢复 Idle 模式，释放输入接管。
+        /// </summary>
         private void EndFiring()
         {
             chargeCount = 0;
@@ -330,6 +467,12 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 自动近战切换（放弃蓄能炮，用近战攻击）
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 切换到近战攻击。当敌人距离≤2格时触发。
+        /// 中断任何蓄力/开火状态，使用近战攻击范围造成伤害。
+        /// 如果没有近战配置则回退到普通移动。
+        /// </summary>
         private void SwitchToMelee()
         {
             // 中断任何蓄力/开火
@@ -364,6 +507,10 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 普通移动（Idle 时不在蓄力距离内）
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 普通移动。尝试向目标方向移动1格，无法移动则执行基础攻击。
+        /// </summary>
         private void NormalMove()
         {
             if (p.PlayerNeedMove(dir, 1))
@@ -375,11 +522,21 @@ namespace ChargeCannon
         // ─────────────────────────────────────────────────────────
         // 辅助方法
         // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 获取最大蓄能层数，从武器参数中读取，默认3层。
+        /// </summary>
+        /// <returns>最大蓄能层数</returns>
         private int GetChargeMax()
         {
             return BattleObject.Instance.weaponParams.GetInt("chargeMax", 3);
         }
 
+        /// <summary>
+        /// 检测指定半径内是否有存活的敌方单位。
+        /// </summary>
+        /// <param name="radius">检测半径（曼哈顿距离）</param>
+        /// <returns>true 表示半径内有敌人</returns>
         private bool HasNearEnemy(int radius)
         {
             var bo = BattleObject.Instance;
@@ -392,6 +549,12 @@ namespace ChargeCannon
             return false;
         }
 
+        /// <summary>
+        /// 计算两个格子坐标之间的曼哈顿距离。
+        /// </summary>
+        /// <param name="a">坐标 A</param>
+        /// <param name="b">坐标 B</param>
+        /// <returns>曼哈顿距离 |ax-bx| + |ay-by|</returns>
         private static int ManhattanDist(Vector2Int a, Vector2Int b)
         {
             return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
