@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardventure 房间底图编辑器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#020617;--surface:#0F172A;--surface2:#1E293B;--surface3:#334155;
+  --border:#334155;--border2:#475569;
+  --text:#F8FAFC;--text2:#94A3B8;--text3:#64748B;
+  --accent:#22C55E;--accent2:#16A34A;--accent-glow:rgba(34,197,94,.15);
+  --danger:#EF4444;--warn:#F59E0B;--info:#3B82F6;--purple:#A855F7;
+  --radius:6px;--radius-lg:10px;
+  --font-ui:'Fira Sans',system-ui,sans-serif;
+  --font-mono:'Fira Code',monospace;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow-md:0 4px 12px rgba(0,0,0,.4);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.5);
+  --transition:all .2s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-ui);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+
+/* ── Toolbar ── */
+.toolbar{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.toolbar .brand{font-size:14px;font-weight:700;color:var(--accent);margin-right:6px;white-space:nowrap;font-family:var(--font-mono);letter-spacing:-.5px;display:flex;align-items:center;gap:6px}
+.toolbar .brand svg{width:18px;height:18px}
+.sep{width:1px;height:20px;background:var(--border);margin:0 4px;flex-shrink:0}
+.btn{padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:12px;font-family:var(--font-ui);transition:var(--transition);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--surface3);color:var(--text);border-color:var(--border2)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#020617;font-weight:600}.btn.primary:hover{background:var(--accent2);border-color:var(--accent2)}
+.btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}.btn.danger:hover{background:var(--danger);color:#fff}
+.btn.success{background:var(--accent);border-color:var(--accent);color:#020617;font-weight:600}.btn.success:hover{background:var(--accent2)}
+.btn svg{width:14px;height:14px;flex-shrink:0}
+select,input[type="number"],input[type="text"]{padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--font-ui);transition:var(--transition)}
+select:focus,input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+select{min-width:90px}input[type="number"]{width:52px;font-family:var(--font-mono)}
+label{font-size:11px;color:var(--text2);white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+
+/* ── Main Layout ── */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* ── Palette Panel ── */
+.palette-panel{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.palette-panel .panel-header{padding:10px 12px 6px;display:flex;align-items:center;justify-content:space-between}
+.palette-panel .panel-header h3{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:600}
+.palette-search{margin:4px 10px 8px;padding:7px 10px 7px 32px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--font-ui);width:calc(100% - 20px);transition:var(--transition);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:10px center}
+.palette-search:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+.palette-list{flex:1;overflow-y:auto;padding:2px 6px}
+.palette-item{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:var(--radius);cursor:pointer;transition:var(--transition);margin-bottom:1px;border:1px solid transparent}
+.palette-item:hover{background:var(--surface2);border-color:var(--border)}
+.palette-item.active{background:var(--accent-glow);border-color:var(--accent);outline:none}
+.palette-swatch{width:28px;height:28px;border-radius:4px;border:1px solid rgba(255,255,255,.08);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--font-mono);transition:var(--transition)}
+.palette-item:hover .palette-swatch{border-color:rgba(255,255,255,.2)}
+.palette-info{flex:1;min-width:0}
+.palette-info .name{font-size:12px;font-weight:500;color:var(--text)}
+.palette-info .name span{color:var(--text3);font-weight:400;font-family:var(--font-mono);font-size:10px}
+.palette-info .desc{font-size:10px;color:var(--text3);margin-top:1px}
+.cat-header{padding:8px 7px 3px;font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;border-top:1px solid var(--border);margin-top:6px}
+
+/* ── Canvas Area ── */
+.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;position:relative;background:repeating-conic-gradient(var(--surface) 0% 25%,var(--bg) 0% 50%) 0 0/20px 20px}
+.grid-container{position:relative}
+.grid-container canvas{image-rendering:pixelated;cursor:crosshair}
+
+/* ── Right Panel ── */
+.right-panel{width:250px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.panel-section{padding:10px 12px;border-bottom:1px solid var(--border)}
+.panel-section h3{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;font-weight:600}
+.prop-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.prop-row label{min-width:48px;text-align:right;font-size:11px;color:var(--text2)}
+.prop-row input,.prop-row select{flex:1;font-size:12px}
+.room-list{max-height:220px;overflow-y:auto}
+.room-item{padding:5px 8px;border-radius:var(--radius);cursor:pointer;font-size:11px;display:flex;justify-content:space-between;transition:var(--transition);border:1px solid transparent}
+.room-item:hover{background:var(--surface2);border-color:var(--border)}
+.room-item.active{background:var(--accent-glow);border-color:var(--accent)}
+.room-item .rid{color:var(--accent);font-weight:600;font-family:var(--font-mono)}
+
+/* ── Status Bar ── */
+.statusbar{display:flex;align-items:center;gap:16px;padding:4px 14px;background:var(--surface);border-top:1px solid var(--border);font-size:11px;color:var(--text3);flex-shrink:0;font-family:var(--font-mono)}
+.statusbar .coord{color:var(--accent);font-weight:600}
+.statusbar .hint{margin-left:auto;font-family:var(--font-ui);font-size:10px;color:var(--text3)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(2,6,23,.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;min-width:420px;max-width:600px;box-shadow:var(--shadow-lg)}
+.modal h2{margin-bottom:14px;font-size:16px;font-weight:600}
+.modal textarea{width:100%;height:180px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:10px;font-family:var(--font-mono);font-size:11px;resize:vertical;transition:var(--transition)}
+.modal textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+
+/* ── Layer Tabs ── */
+.layer-tabs{display:flex;gap:2px;margin-bottom:8px}
+.layer-tab{padding:5px 10px;border-radius:var(--radius) var(--radius) 0 0;font-size:11px;cursor:pointer;background:var(--surface2);border:1px solid var(--border);border-bottom:none;color:var(--text3);transition:var(--transition);font-weight:500}
+.layer-tab:hover{color:var(--text2);background:var(--surface3)}
+.layer-tab.active{background:var(--accent-glow);color:var(--accent);border-color:var(--accent);font-weight:600}
+
+/* ── Brush Size ── */
+.brush-size-btn{width:28px;height:28px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:11px;font-family:var(--font-mono);display:inline-flex;align-items:center;justify-content:center;transition:var(--transition)}
+.brush-size-btn:hover{background:var(--surface3);color:var(--text)}
+.brush-size-btn.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent);font-weight:600}
+
+/* ── Quick Buttons ── */
+.quick-btn{width:100%;margin-bottom:3px;font-size:11px;padding:5px 8px;justify-content:flex-start}
+.quick-btn svg{width:13px;height:13px}
+
+/* ── Checkbox ── */
+input[type="checkbox"]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer}
+
+/* ── Tooltip ── */
+[data-tip]{position:relative}
+[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--surface2);color:var(--text);font-size:10px;padding:4px 8px;border-radius:4px;white-space:nowrap;z-index:100;border:1px solid var(--border);pointer-events:none;box-shadow:var(--shadow-md)}
+
+/* ── Animations ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.modal{animation:fadeIn .2s ease-out}
+.palette-item.active{animation:fadeIn .15s ease-out}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    Room Editor
+  </span>
+  <div class="sep"></div>
+  <button class="btn" onclick="loadFiles()" data-tip="加载CSV文件">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    加载
+  </button>
+  <button class="btn" onclick="showImportModal()" data-tip="导入CSV数据">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    导入
+  </button>
+  <button class="btn success" onclick="exportCSV()" data-tip="导出当前房间为CSV">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    导出
+  </button>
+  <div class="sep"></div>
+  <button class="btn" onclick="newRoom()" data-tip="新建房间">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    新建
+  </button>
+  <button class="btn" onclick="duplicateRoom()" data-tip="复制当前房间">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    复制
+  </button>
+  <button class="btn danger" onclick="deleteRoom()" data-tip="删除当前房间">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    删除
+  </button>
+  <div class="sep"></div>
+  <label>画笔:</label>
+  <button class="brush-size-btn active" data-size="1" onclick="setBrush(1)">1</button>
+  <button class="brush-size-btn" data-size="3" onclick="setBrush(3)">3</button>
+  <button class="brush-size-btn" data-size="5" onclick="setBrush(5)">5</button>
+  <div class="sep"></div>
+  <label>尺寸:</label>
+  <input type="number" id="gridCols" value="11" min="3" max="30" onchange="resizeGrid()">x
+  <input type="number" id="gridRows" value="11" min="3" max="30" onchange="resizeGrid()">
+  <div class="sep"></div>
+  <label><input type="checkbox" id="showGrid" checked onchange="render()">网格</label>
+  <label><input type="checkbox" id="showIDs" onchange="render()">ID</label>
+  <div class="sep"></div>
+  <button class="btn" onclick="undo()" data-tip="Ctrl+Z">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+    撤销
+  </button>
+  <button class="btn" onclick="redo()" data-tip="Ctrl+Y">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    重做
+  </button>
+</div>
+
+<div class="main">
+  <div class="palette-panel">
+    <div class="panel-header">
+      <h3>图块调色板</h3>
+    </div>
+    <input type="text" class="palette-search" placeholder="搜索图块ID/名称..." oninput="filterPalette(this.value)">
+    <div class="palette-list" id="paletteList"></div>
+  </div>
+
+  <div class="canvas-area" id="canvasArea">
+    <div class="grid-container"><canvas id="gridCanvas"></canvas></div>
+  </div>
+
+  <div class="right-panel">
+    <div class="panel-section">
+      <h3>房间列表</h3>
+      <div class="room-list" id="roomList"></div>
+    </div>
+    <div class="panel-section">
+      <h3>房间属性</h3>
+      <div class="prop-row"><label>ID:</label><input type="number" id="propId" min="1" onchange="setProp('id',+this.value)"></div>
+      <div class="prop-row"><label>名称:</label><input type="text" id="propName" onchange="setProp('name',this.value)"></div>
+      <div class="prop-row"><label>类型:</label>
+        <select id="propType" onchange="setProp('type',+this.value)">
+          <option value="0">战斗</option><option value="1">家园</option><option value="2">商店</option>
+          <option value="3">能力</option><option value="4">默认</option><option value="5">小游戏</option>
+          <option value="6">奖励战</option><option value="7">生存战</option>
+        </select>
+      </div>
+      <div class="prop-row"><label>章节:</label><input type="number" id="propChapter" min="1" max="10" onchange="setProp('chapter',+this.value)"></div>
+      <div class="prop-row"><label>权重:</label><input type="number" id="propWeight" min="1" onchange="setProp('weight',+this.value)"></div>
+    </div>
+    <div class="panel-section">
+      <h3>图层</h3>
+      <div class="layer-tabs">
+        <div class="layer-tab active" data-layer="terrain" onclick="switchLayer('terrain')">地形</div>
+        <div class="layer-tab" data-layer="objects" onclick="switchLayer('objects')">物件</div>
+      </div>
+      <p style="font-size:10px;color:var(--text3)">地形=地面/墙壁/障碍 | 物件=生成点/交互物<br>Tab切换图层</p>
+    </div>
+    <div class="panel-section">
+      <h3>变换</h3>
+      <button class="btn quick-btn" onclick="mirrorH()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><line x1="12" y1="20" x2="12" y2="4"/></svg>
+        水平镜像
+      </button>
+      <button class="btn quick-btn" onclick="mirrorV()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+        垂直镜像
+      </button>
+      <button class="btn quick-btn" onclick="rotateCW()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><polyline points="21 3 21 9 15 9"/></svg>
+        顺时针旋转90
+      </button>
+      <button class="btn quick-btn" onclick="shiftUp()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+        上移
+      </button>
+      <button class="btn quick-btn" onclick="shiftDown()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+        下移
+      </button>
+      <button class="btn quick-btn" onclick="shiftLeft()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        左移
+      </button>
+      <button class="btn quick-btn" onclick="shiftRight()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        右移
+      </button>
+    </div>
+    <div class="panel-section">
+      <h3>批量</h3>
+      <button class="btn quick-btn success" onclick="fillAll()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"/><path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4z"/><path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0z"/><path d="m15.47 13.47 1.53 1.53-1.53 1.53a3.5 3.5 0 0 1-4.94 0L10 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0z"/><path d="m19.47 9.47 1.53 1.53-1.53 1.53a3.5 3.5 0 0 1-4.94 0L14 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0z"/></svg>
+        填充当前图块
+      </button>
+      <button class="btn quick-btn" onclick="clearAll()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+        清空当前图层
+      </button>
+      <button class="btn quick-btn" onclick="borderWalls()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+        边框围墙
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span>坐标: <span class="coord" id="sCoord">-,-</span></span>
+  <span>图块: <span id="sTile">-</span></span>
+  <span>房间: <span id="sRoom">-</span></span>
+  <span>图层: <span id="sLayer">地形</span></span>
+  <span class="hint">左键绘制 | 右键擦除 | 中键拾取 | 滚轮缩放 | Tab切换图层</span>
+</div>
+
+<script>
+// ============================================================
+// TILE DEFINITIONS
+// ============================================================
+const TILES = [
+  // --- 地形 ---
+  {id:0,   name:'空地',     cat:'terrain', color:'#1E293B', icon:'·', desc:'可通行空地(0)'},
+  {id:99,  name:'墙壁',     cat:'terrain', color:'#475569', icon:'█', desc:'不可通行墙壁(99)'},
+  {id:800, name:'草丛',     cat:'terrain', color:'#166534', icon:'♣', desc:'可通行草丛(800)'},
+  {id:801, name:'树',       cat:'terrain', color:'#15803D', icon:'♠', desc:'不可通行树木(801)'},
+  {id:802, name:'箱子',     cat:'terrain', color:'#A16207', icon:'□', desc:'可破坏箱子(802)'},
+  {id:803, name:'木桶',     cat:'terrain', color:'#92400E', icon:'○', desc:'可破坏木桶(803)'},
+  {id:804, name:'水面',     cat:'terrain', color:'#0E7490', icon:'≈', desc:'不可通行水面(804)'},
+  {id:805, name:'岩浆',     cat:'terrain', color:'#DC2626', icon:'~', desc:'伤害地形岩浆(805)'},
+  {id:806, name:'冰面',     cat:'terrain', color:'#38BDF8', icon:'❄', desc:'滑行冰面(806)'},
+  {id:807, name:'毒沼',     cat:'terrain', color:'#4D7C0F', icon:'☠', desc:'持续伤害毒沼(807)'},
+  {id:808, name:'裂缝',     cat:'terrain', color:'#78716C', icon:'⚡', desc:'陷阱裂缝(808)'},
+  {id:809, name:'暗墙',     cat:'terrain', color:'#3F3F46', icon:'▓', desc:'半透明暗墙(809)'},
+  {id:810, name:'火盆',     cat:'terrain', color:'#EA580C', icon:'☀', desc:'装饰火盆(810)'},
+  {id:811, name:'墓碑',     cat:'terrain', color:'#52525B', icon:'✝', desc:'装饰墓碑(811)'},
+  {id:812, name:'路障',     cat:'terrain', color:'#71717A', icon:'▬', desc:'可移动路障(812)'},
+  {id:813, name:'栅栏',     cat:'terrain', color:'#78350F', icon:'▦', desc:'不可通行栅栏(813)'},
+  {id:814, name:'沙地',     cat:'terrain', color:'#CA8A04', icon:'·', desc:'可通行沙地(814)'},
+  {id:815, name:'雪地',     cat:'terrain', color:'#E2E8F0', icon:'·', desc:'可通行雪地(815)'},
+  {id:816, name:'传送地板', cat:'terrain', color:'#9333EA', icon:'◎', desc:'传送地板(816)'},
+  // --- 物件/生成点 ---
+  {id:100, name:'玩家出生', cat:'objects', color:'#22C55E', icon:'P',  desc:'玩家起始位置(100)'},
+  {id:101, name:'敌人出生', cat:'objects', color:'#F97316', icon:'E',  desc:'普通敌人生成(101)'},
+  {id:102, name:'精英出生', cat:'objects', color:'#EF4444', icon:'★',  desc:'精英敌人生成(102)'},
+  {id:103, name:'Boss出生', cat:'objects', color:'#EC4899', icon:'♛',  desc:'Boss生成点(103)'},
+  {id:300, name:'金骷髅',   cat:'objects', color:'#EAB308', icon:'☠',  desc:'金骷髅(300)'},
+  {id:301, name:'宝箱',     cat:'objects', color:'#D97706', icon:'▣',  desc:'可开启宝箱(301)'},
+  {id:302, name:'宝箱怪',   cat:'objects', color:'#F472B6', icon:'☠',  desc:'伪装宝箱怪(302)'},
+  {id:901, name:'尖刺',     cat:'objects', color:'#EF4444', icon:'✕',  desc:'伤害陷阱尖刺(901)'},
+  {id:902, name:'地刺',     cat:'objects', color:'#DC2626', icon:'▲',  desc:'地刺陷阱(902)'},
+  {id:997, name:'武器门',   cat:'objects', color:'#34D399', icon:'W',  desc:'武器选择门(997)'},
+  {id:998, name:'传送门',   cat:'objects', color:'#A855F7', icon:'◎',  desc:'传送门(998)'},
+  {id:965, name:'Boss门',   cat:'objects', color:'#EC4899', icon:'♛',  desc:'Boss入口门(965)'},
+  {id:966, name:'出口门',   cat:'objects', color:'#22D3EE', icon:'►',  desc:'房间出口门(966)'},
+  {id:986, name:'家园树',   cat:'objects', color:'#16A34A', icon:'♠',  desc:'家园装饰树(986)'},
+  {id:987, name:'家园花',   cat:'objects', color:'#EC4899', icon:'✿',  desc:'家园装饰花(987)'},
+  {id:1101,name:'商人',     cat:'objects', color:'#34D399', icon:'$',  desc:'商店商人(1101)'},
+  {id:1126,name:'幸运猎人', cat:'objects', color:'#FDE047', icon:'♦',  desc:'幸运猎人NPC(1126)'},
+  {id:1129,name:'世界种子', cat:'objects', color:'#60A5FA', icon:'✦',  desc:'世界种子(1129)'},
+  {id:1136,name:'排行榜',   cat:'objects', color:'#E2E8F0', icon:'☰',  desc:'排行榜(1136)'},
+  {id:1137,name:'祭坛',     cat:'objects', color:'#D8B4FE', icon:'✦',  desc:'能力选择祭坛(1137)'},
+  {id:1138,name:'治疗泉',   cat:'objects', color:'#60A5FA', icon:'✚',  desc:'恢复HP(1138)'},
+  {id:1139,name:'存档点',   cat:'objects', color:'#E2E8F0', icon:'⬟',  desc:'存档水晶(1139)'},
+  {id:1140,name:'事件点',   cat:'objects', color:'#FDE047', icon:'?',  desc:'随机事件(1140)'},
+  {id:1150,name:'弩箭点',   cat:'objects', color:'#FCA5A5', icon:'➹',  desc:'弩箭发射位(1150)'},
+  {id:1200,name:'NPC',      cat:'objects', color:'#A78BFA', icon:'♦',  desc:'对话NPC(1200)'},
+  {id:1201,name:'装饰物',   cat:'objects', color:'#71717A', icon:'◇',  desc:'纯装饰(1201)'},
+  // --- 门(方向) ---
+  {id:200, name:'门(上)',   cat:'objects', color:'#22D3EE', icon:'▲',  desc:'上方出口(200)'},
+  {id:201, name:'门(下)',   cat:'objects', color:'#22D3EE', icon:'▼',  desc:'下方出口(201)'},
+  {id:202, name:'门(左)',   cat:'objects', color:'#22D3EE', icon:'◄',  desc:'左侧出口(202)'},
+  {id:203, name:'门(右)',   cat:'objects', color:'#22D3EE', icon:'►',  desc:'右侧出口(203)'},
+];
+
+const TILE_MAP = {};
+TILES.forEach(t => TILE_MAP[t.id] = t);
+
+const CATS = [
+  {key:'terrain', label:'地形'},
+  {key:'objects', label:'物件/生成点'},
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let curRoom = null, rooms = [], curLayer = 'terrain';
+let selTile = 99, brushSz = 1, cellSz = 40;
+let painting = false, paintBtn = 0;
+let hx = -1, hy = -1;
+let undos = [], redos = [];
+const MAX_UNDO = 50;
+
+// ============================================================
+// ROOM MODEL
+// ============================================================
+function mkRoom(id, cols, rows) {
+  cols = cols || 11; rows = rows || 11;
+  return {
+    id, name:'新房间', type:0, chapter:1, weight:100, cols, rows,
+    terrain: Array.from({length:rows}, ()=> Array(cols).fill(0)),
+    objects: Array.from({length:rows}, ()=> Array(cols).fill(-1)),
+  };
+}
+function cloneG(g){ return g.map(r=>[...r]); }
+function pushU(){
+  if(!curRoom) return;
+  undos.push({t:cloneG(curRoom.terrain),o:cloneG(curRoom.objects)});
+  if(undos.length>MAX_UNDO) undos.shift();
+  redos=[];
+}
+function undo(){
+  if(!curRoom||!undos.length) return;
+  redos.push({t:cloneG(curRoom.terrain),o:cloneG(curRoom.objects)});
+  const s=undos.pop(); curRoom.terrain=s.t; curRoom.objects=s.o; render();
+}
+function redo(){
+  if(!curRoom||!redos.length) return;
+  undos.push({t:cloneG(curRoom.terrain),o:cloneG(curRoom.objects)});
+  const s=redos.pop(); curRoom.terrain=s.t; curRoom.objects=s.o; render();
+}
+
+// ============================================================
+// PALETTE
+// ============================================================
+function buildPalette(filter=''){
+  const el = document.getElementById('paletteList');
+  el.innerHTML = '';
+  const fl = filter.toLowerCase();
+
+  CATS.forEach(cat => {
+    const tiles = TILES.filter(t => t.cat === cat.key && (
+      !fl || t.name.toLowerCase().includes(fl) || t.desc.toLowerCase().includes(fl) || String(t.id) === fl
+    ));
+    if (!tiles.length) return;
+
+    const hdr = document.createElement('div');
+    hdr.className = 'cat-header';
+    hdr.textContent = cat.label;
+    el.appendChild(hdr);
+
+    tiles.forEach(t => {
+      const d = document.createElement('div');
+      d.className = 'palette-item' + (t.id === selTile ? ' active' : '');
+      d.dataset.id = t.id;
+      d.innerHTML = `<div class="palette-swatch" style="background:${t.color}">${t.icon}</div>
+        <div class="palette-info"><div class="name">${t.name} <span>#${t.id}</span></div><div class="desc">${t.desc}</div></div>`;
+      d.onclick = () => selTileFn(t.id);
+      el.appendChild(d);
+    });
+  });
+}
+
+function filterPalette(v){ buildPalette(v); }
+
+function selTileFn(id){
+  selTile = id;
+  const t = TILE_MAP[id];
+  if(t && t.cat !== curLayer) switchLayer(t.cat);
+  buildPalette(document.querySelector('.palette-search').value);
+}
+
+// ============================================================
+// LAYER
+// ============================================================
+function switchLayer(l){
+  curLayer = l;
+  document.querySelectorAll('.layer-tab').forEach(t=>t.classList.toggle('active',t.dataset.layer===l));
+  document.getElementById('sLayer').textContent = l==='terrain'?'地形':'物件';
+  const first = TILES.find(t=>t.cat===l);
+  if(first && TILE_MAP[selTile]?.cat!==l) selTileFn(first.id);
+  render();
+}
+
+// ============================================================
+// CANVAS
+// ============================================================
+const cvs = document.getElementById('gridCanvas');
+const ctx = cvs.getContext('2d');
+
+function render(){
+  if(!curRoom){ ctx.clearRect(0,0,cvs.width,cvs.height); return; }
+  const {cols,rows,terrain,objects} = curRoom;
+  cvs.width = cols*cellSz; cvs.height = rows*cellSz;
+
+  // Terrain
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+    drawCell(x,y, TILE_MAP[terrain[y][x]]||TILE_MAP[0]);
+  }
+  // Objects overlay
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+    const oid = objects[y][x];
+    if(oid >= 0) drawCell(x,y, TILE_MAP[oid]||mkUnknown(oid), 0.88);
+  }
+  // Grid
+  if(document.getElementById('showGrid').checked){
+    ctx.strokeStyle='rgba(148,163,184,0.08)'; ctx.lineWidth=1;
+    for(let x=0;x<=cols;x++){ctx.beginPath();ctx.moveTo(x*cellSz+.5,0);ctx.lineTo(x*cellSz+.5,rows*cellSz);ctx.stroke();}
+    for(let y=0;y<=rows;y++){ctx.beginPath();ctx.moveTo(0,y*cellSz+.5);ctx.lineTo(cols*cellSz,y*cellSz+.5);ctx.stroke();}
+  }
+  // IDs
+  if(document.getElementById('showIDs').checked){
+    ctx.font='8px "Fira Code",monospace'; ctx.fillStyle='rgba(248,250,252,0.35)'; ctx.textAlign='right'; ctx.textBaseline='bottom';
+    for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+      const v = curLayer==='terrain'?terrain[y][x]:objects[y][x];
+      if(v>0 || (curLayer==='objects'&&v>=0)) ctx.fillText(v, (x+1)*cellSz-2, (y+1)*cellSz-1);
+    }
+  }
+  // Hover
+  if(hx>=0&&hx<cols&&hy>=0&&hy<rows){
+    const half=Math.floor(brushSz/2);
+    for(let dy=-half;dy<=half;dy++) for(let dx=-half;dx<=half;dx++){
+      const px=hx+dx,py=hy+dy;
+      if(px>=0&&px<cols&&py>=0&&py<rows){
+        ctx.strokeStyle='rgba(34,197,94,0.6)'; ctx.lineWidth=2;
+        ctx.strokeRect(px*cellSz+1,py*cellSz+1,cellSz-2,cellSz-2);
+      }
+    }
+  }
+}
+
+function mkUnknown(id){ return {id,name:'未知#'+id,cat:'terrain',color:'#3F3F46',icon:'?',desc:'未知图块('+id+')'}; }
+
+function drawCell(x,y,tile,alpha=1){
+  const px=x*cellSz, py=y*cellSz;
+  ctx.globalAlpha=alpha;
+  ctx.fillStyle=tile.color;
+  ctx.fillRect(px,py,cellSz,cellSz);
+  // Icon
+  ctx.fillStyle='#F8FAFC';
+  ctx.font=`bold ${Math.max(9,cellSz*.38)}px "Fira Sans",sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(tile.icon, px+cellSz/2, py+cellSz/2);
+  ctx.globalAlpha=1;
+}
+
+// ============================================================
+// MOUSE
+// ============================================================
+function cell(e){
+  const r=cvs.getBoundingClientRect();
+  return {x:Math.floor((e.clientX-r.left)/cellSz), y:Math.floor((e.clientY-r.top)/cellSz)};
+}
+
+function paint(x,y,erase){
+  if(!curRoom) return;
+  const {cols,rows}=curRoom, half=Math.floor(brushSz/2);
+  for(let dy=-half;dy<=half;dy++) for(let dx=-half;dx<=half;dx++){
+    const px=x+dx,py=y+dy;
+    if(px>=0&&px<cols&&py>=0&&py<rows){
+      if(curLayer==='terrain') curRoom.terrain[py][px]=erase?0:selTile;
+      else curRoom.objects[py][px]=erase?-1:selTile;
+    }
+  }
+  render();
+}
+
+cvs.addEventListener('mousedown',e=>{
+  e.preventDefault(); if(!curRoom) return;
+  const{x,y}=cell(e); pushU(); painting=true; paintBtn=e.button;
+  if(e.button===0) paint(x,y,false);
+  else if(e.button===1) pickTile(x,y);
+  else if(e.button===2) paint(x,y,true);
+});
+cvs.addEventListener('mousemove',e=>{
+  const{x,y}=cell(e); hx=x; hy=y;
+  if(curRoom&&x>=0&&x<curRoom.cols&&y>=0&&y<curRoom.rows){
+    const v=curLayer==='terrain'?curRoom.terrain[y][x]:curRoom.objects[y][x];
+    const t=TILE_MAP[v];
+    document.getElementById('sCoord').textContent=`${x},${y}`;
+    document.getElementById('sTile').textContent=t?`${t.name}(${v})`:(v===-1?'空':`#${v}`);
+  }
+  if(painting){
+    if(paintBtn===0) paint(x,y,false);
+    else if(paintBtn===2) paint(x,y,true);
+  }
+  render();
+});
+cvs.addEventListener('mouseup',()=>{painting=false});
+cvs.addEventListener('mouseleave',()=>{painting=false;hx=-1;hy=-1;render()});
+cvs.addEventListener('contextmenu',e=>e.preventDefault());
+cvs.addEventListener('wheel',e=>{
+  e.preventDefault();
+  cellSz=Math.max(16,Math.min(80,cellSz-Math.sign(e.deltaY)*4));
+  render();
+},{passive:false});
+
+function pickTile(x,y){
+  if(!curRoom) return;
+  const v=curLayer==='terrain'?curRoom.terrain[y][x]:curRoom.objects[y][x];
+  if(TILE_MAP[v]) selTileFn(v);
+}
+
+// ============================================================
+// BRUSH / GRID
+// ============================================================
+function setBrush(s){
+  brushSz=s;
+  document.querySelectorAll('.brush-size-btn').forEach(b=>b.classList.toggle('active',+b.dataset.size===s));
+}
+
+function resizeGrid(){
+  if(!curRoom) return;
+  const nc=+document.getElementById('gridCols').value||11, nr=+document.getElementById('gridRows').value||11;
+  pushU();
+  curRoom.terrain=resizeG(curRoom.terrain,curRoom.cols,curRoom.rows,nc,nr,0);
+  curRoom.objects=resizeG(curRoom.objects,curRoom.cols,curRoom.rows,nc,nr,-1);
+  curRoom.cols=nc; curRoom.rows=nr; render();
+}
+function resizeG(old,oc,or,nc,nr,fv){
+  const ng=[];
+  for(let y=0;y<nr;y++){const row=[];for(let x=0;x<nc;x++)row.push(y<or&&x<oc?old[y][x]:fv);ng.push(row);}
+  return ng;
+}
+
+// ============================================================
+// ROOM MGMT
+// ============================================================
+function newRoom(){
+  const id=rooms.length?Math.max(...rooms.map(r=>r.id))+1:1;
+  const r=mkRoom(id); rooms.push(r); selRoom(r); buildRL();
+}
+function duplicateRoom(){
+  if(!curRoom) return;
+  const id=Math.max(...rooms.map(r=>r.id))+1;
+  const r=mkRoom(id,curRoom.cols,curRoom.rows);
+  r.name=curRoom.name+' 副本'; r.type=curRoom.type; r.chapter=curRoom.chapter; r.weight=curRoom.weight;
+  r.terrain=cloneG(curRoom.terrain); r.objects=cloneG(curRoom.objects);
+  rooms.push(r); selRoom(r); buildRL();
+}
+function deleteRoom(){
+  if(!curRoom) return;
+  if(!confirm(`删除房间 #${curRoom.id} "${curRoom.name}"？`)) return;
+  rooms=rooms.filter(r=>r!==curRoom);
+  curRoom=rooms.length?rooms[0]:null;
+  if(curRoom) selRoom(curRoom); buildRL(); render();
+}
+function selRoom(r){
+  curRoom=r; undos=[]; redos=[];
+  if(r){
+    document.getElementById('gridCols').value=r.cols;
+    document.getElementById('gridRows').value=r.rows;
+    document.getElementById('propId').value=r.id;
+    document.getElementById('propName').value=r.name;
+    document.getElementById('propType').value=r.type;
+    document.getElementById('propChapter').value=r.chapter;
+    document.getElementById('propWeight').value=r.weight;
+    document.getElementById('sRoom').textContent=`#${r.id} ${r.name}`;
+  }
+  render();
+}
+function buildRL(){
+  const el=document.getElementById('roomList'); el.innerHTML='';
+  const tn=['战斗','家园','商店','能力','默认','小游戏','奖励战','生存战'];
+  rooms.forEach(r=>{
+    const d=document.createElement('div');
+    d.className='room-item'+(r===curRoom?' active':'');
+    d.innerHTML=`<span class="rid">#${r.id}</span><span style="color:var(--text3)">${r.name} ${r.cols}x${r.rows} ${tn[r.type]||''}</span>`;
+    d.onclick=()=>selRoom(r); el.appendChild(d);
+  });
+}
+function setProp(k,v){
+  if(!curRoom) return;
+  curRoom[k]=v; buildRL();
+}
+
+// ============================================================
+// TRANSFORMS
+// ============================================================
+function mirrorH(){
+  if(!curRoom) return; pushU();
+  curRoom.terrain=curRoom.terrain.map(r=>[...r].reverse());
+  curRoom.objects=curRoom.objects.map(r=>[...r].reverse());
+  swapDoor(curRoom.objects,202,203); render();
+}
+function mirrorV(){
+  if(!curRoom) return; pushU();
+  curRoom.terrain=[...curRoom.terrain].reverse();
+  curRoom.objects=[...curRoom.objects].reverse();
+  swapDoor(curRoom.objects,200,201); render();
+}
+function swapDoor(grid,a,b){
+  grid.forEach(row=>row.forEach((v,x,arr)=>{
+    if(v===a)arr[x]=b; else if(v===b)arr[x]=a;
+  }));
+}
+function rotateCW(){
+  if(!curRoom) return; pushU();
+  const{cols,rows}=curRoom;
+  const nt=[],no=[];
+  for(let y=0;y<cols;y++){const tr=[],or=[];
+    for(let x=0;x<rows;x++){tr.push(curRoom.terrain[rows-1-x][y]);or.push(curRoom.objects[rows-1-x][y]);}
+    nt.push(tr);no.push(or);
+  }
+  curRoom.terrain=nt; curRoom.objects=no;
+  curRoom.cols=rows; curRoom.rows=cols;
+  document.getElementById('gridCols').value=rows; document.getElementById('gridRows').value=cols;
+  curRoom.objects.forEach(row=>row.forEach((v,x,arr)=>{
+    if(v===200)arr[x]=203; else if(v===203)arr[x]=201;
+    else if(v===201)arr[x]=202; else if(v===202)arr[x]=200;
+  }));
+  render();
+}
+function shiftG(g,dx,dy,fv){
+  const rows=g.length,cols=g[0].length,ng=[];
+  for(let y=0;y<rows;y++){const row=[];for(let x=0;x<cols;x++){
+    const sy=y-dy,sx=x-dx; row.push(sy>=0&&sy<rows&&sx>=0&&sx<cols?g[sy][sx]:fv);
+  }ng.push(row);}return ng;
+}
+function shiftUp()   {if(!curRoom)return;pushU();curRoom.terrain=shiftG(curRoom.terrain,0,-1,0);curRoom.objects=shiftG(curRoom.objects,0,-1,-1);render();}
+function shiftDown() {if(!curRoom)return;pushU();curRoom.terrain=shiftG(curRoom.terrain,0,1,0);curRoom.objects=shiftG(curRoom.objects,0,1,-1);render();}
+function shiftLeft() {if(!curRoom)return;pushU();curRoom.terrain=shiftG(curRoom.terrain,-1,0,0);curRoom.objects=shiftG(curRoom.objects,-1,0,-1);render();}
+function shiftRight(){if(!curRoom)return;pushU();curRoom.terrain=shiftG(curRoom.terrain,1,0,0);curRoom.objects=shiftG(curRoom.objects,1,0,-1);render();}
+
+function fillAll(){
+  if(!curRoom)return; pushU();
+  const{cols,rows}=curRoom;
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++)
+    if(curLayer==='terrain') curRoom.terrain[y][x]=selTile; else curRoom.objects[y][x]=selTile;
+  render();
+}
+function clearAll(){
+  if(!curRoom)return; pushU();
+  const{cols,rows}=curRoom;
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++)
+    if(curLayer==='terrain') curRoom.terrain[y][x]=0; else curRoom.objects[y][x]=-1;
+  render();
+}
+function borderWalls(){
+  if(!curRoom)return; pushU();
+  const{cols,rows}=curRoom;
+  for(let x=0;x<cols;x++){curRoom.terrain[0][x]=99;curRoom.terrain[rows-1][x]=99;}
+  for(let y=0;y<rows;y++){curRoom.terrain[y][0]=99;curRoom.terrain[y][cols-1]=99;}
+  render();
+}
+
+// ============================================================
+// CSV IMPORT / EXPORT
+// ============================================================
+function mergeToGrid(r){
+  const grid=[];
+  for(let y=0;y<r.rows;y++){
+    const row=[];
+    for(let x=0;x<r.cols;x++){
+      const obj=r.objects[y][x];
+      const ter=r.terrain[y][x];
+      const val = obj>=0 ? obj : (ter===0 ? '' : ter);
+      row.push(val);
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+function exportCSV(){
+  if(!curRoom){alert('请先选择或创建房间');return;}
+  const r=curRoom;
+  const grid=mergeToGrid(r);
+  const csv=grid.map(row=>row.join(',')).join('\n')+'\n';
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`Room_${r.id}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function showImportModal(){
+  const ov=document.createElement('div'); ov.className='modal-overlay';
+  ov.innerHTML=`<div class="modal">
+    <h2>导入房间CSV</h2>
+    <p style="font-size:11px;color:var(--text3);margin-bottom:8px">粘贴CSV内容或选择文件。格式：纯数字网格，与 RoomConfigs 目录一致。空格子留空，地形/物件合并在同一层。</p>
+    <textarea id="importText" placeholder="粘贴CSV内容到这里...&#10;&#10;示例(Room_100 格式):&#10;99,99,99,99,99&#10;99,,999,,99&#10;99,0,,0,99&#10;99,,,,99&#10;99,99,99,99,99"></textarea>
+    <div style="margin-top:8px"><input type="file" id="importFile" accept=".csv" style="color:var(--text);font-size:12px"></div>
+    <div class="actions"><button class="btn" onclick="this.closest('.modal-overlay').remove()">取消</button><button class="btn primary" onclick="doImport()">导入</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  document.getElementById('importFile').addEventListener('change',e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const rd=new FileReader(); rd.onload=ev=>{document.getElementById('importText').value=ev.target.result;}; rd.readAsText(f);
+  });
+}
+
+function doImport(){
+  const text=document.getElementById('importText').value.trim();
+  if(!text){alert('请输入CSV内容');return;}
+  try{
+    importLayoutCSV(text);
+    document.querySelector('.modal-overlay').remove();
+    buildRL(); render();
+  }catch(e){alert('导入失败: '+e.message);console.error(e);}
+}
+
+function importIndexCSV(text){
+  const lines=text.trim().split(/\r?\n/);
+  let hi=lines.findIndex(l=>/RoomId|room_id|RoomID|^ID/i.test(l));
+  if(hi<0) throw new Error('找不到表头');
+  const hdr=lines[hi].split(',').map(h=>h.trim());
+  for(let i=hi+1;i<lines.length;i++){
+    const v=lines[i].split(',').map(s=>s.trim());
+    if(v.length<hdr.length) continue;
+    const r=mkRoom(parseInt(v[0])||i);
+    for(let j=0;j<hdr.length;j++){
+      const h=hdr[j].toLowerCase();
+      if(h.includes('name'))r.name=v[j];
+      else if(h.includes('type'))r.type=parseInt(v[j])||0;
+      else if(h.includes('chapter'))r.chapter=parseInt(v[j])||1;
+      else if(h.includes('weight'))r.weight=parseInt(v[j])||100;
+      else if(h.includes('width')||h.includes('col'))r.cols=parseInt(v[j])||11;
+      else if(h.includes('height')||h.includes('row'))r.rows=parseInt(v[j])||1;
+    }
+    rooms.push(r);
+  }
+  if(rooms.length) selRoom(rooms[rooms.length-1]);
+}
+
+function importLayoutCSV(text){
+  const lines=text.trim().split(/\r?\n/);
+  let id=rooms.length?Math.max(...rooms.map(r=>r.id))+1:1;
+  let name='导入房间',type=0,chapter=1,weight=100;
+  const gridLines=[];
+
+  for(const line of lines){
+    const l=line.trim();
+    if(!l||l.startsWith('#')) continue;
+    const kv=l.match(/^([a-zA-Z]\w*)\s*,\s*(.+)$/);
+    if(kv){
+      const kl=kv[1].toLowerCase();
+      if(kl==='id')id=parseInt(kv[2])||id;
+      else if(kl==='name')name=kv[2];
+      else if(kl==='type')type=parseInt(kv[2])||0;
+      else if(kl==='chapter')chapter=parseInt(kv[2])||1;
+      else if(kl==='weight')weight=parseInt(kv[2])||100;
+      continue;
+    }
+    gridLines.push(l);
+  }
+
+  if(!gridLines.length) throw new Error('未找到有效布局数据');
+
+  const OBJECT_IDS=new Set(TILES.filter(t=>t.cat==='objects').map(t=>t.id));
+  const rows=gridLines.length, cols=gridLines[0].split(',').length;
+  const r=mkRoom(id,cols,rows);
+  r.name=name; r.type=type; r.chapter=chapter; r.weight=weight;
+
+  for(let y=0;y<rows;y++){
+    const cells=gridLines[y].split(',');
+    for(let x=0;x<cols;x++){
+      const raw=(cells[x]||'').trim();
+      if(raw===''){
+        r.terrain[y][x]=0; r.objects[y][x]=-1;
+      } else {
+        const v=parseInt(raw);
+        if(OBJECT_IDS.has(v)){
+          r.terrain[y][x]=0; r.objects[y][x]=v;
+        } else {
+          r.terrain[y][x]=v; r.objects[y][x]=-1;
+        }
+      }
+    }
+  }
+
+  rooms.push(r); selRoom(r);
+  document.getElementById('gridCols').value=cols;
+  document.getElementById('gridRows').value=rows;
+}
+
+// ============================================================
+// LOAD FILES
+// ============================================================
+function loadFiles(){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.multiple=true; inp.accept='.csv';
+  inp.onchange=async e=>{
+    for(const f of e.target.files){
+      const text=await f.text();
+      try{ importLayoutCSV(text); }
+      catch(err){console.warn(`Failed: ${f.name}`,err);}
+    }
+    buildRL(); render();
+  };
+  inp.click();
+}
+
+// ============================================================
+// KEYBOARD
+// ============================================================
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if(e.ctrlKey&&e.key==='z'){e.preventDefault();undo();}
+  else if(e.ctrlKey&&e.key==='y'){e.preventDefault();redo();}
+  else if(e.ctrlKey&&e.key==='s'){e.preventDefault();exportCSV();}
+  else if(e.key==='1')setBrush(1);
+  else if(e.key==='2')setBrush(3);
+  else if(e.key==='3')setBrush(5);
+  else if(e.key==='Tab'){e.preventDefault();switchLayer(curLayer==='terrain'?'objects':'terrain');}
+  else if(e.key==='Delete')clearAll();
+});
+
+// ============================================================
+// INIT
+// ============================================================
+buildPalette();
+newRoom();
+</script>
+</body>
+</html>
