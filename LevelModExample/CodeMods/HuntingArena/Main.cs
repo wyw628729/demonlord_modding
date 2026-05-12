@@ -24,7 +24,7 @@ namespace HuntingArena
                 factory:    () => new HuntingArenaRoom(),
                 sprite:     null,
                 spriteName: "大连续狩猎",
-                bgmKey:     null
+                bgmKey:     "battleBgmBoss12"
             );
 
             // 为 1~4 章分别注册布局，无论玩家在哪章进入都能找到房间配置
@@ -193,6 +193,7 @@ namespace HuntingArena
             string nameList = string.Join(" → ", System.Array.ConvertAll(_selectedBosses, id =>
                 BossNames.TryGetValue(id, out var n) ? n : $"#{id}"));
             bo.SpawnBoardWord($"【大连续狩猎】{nameList}\n每隔 {BossInterval} 回合下一个登场，全灭即通关！");
+            GameController.Instance.gameUI.ShowNoticeText($"【大连续狩猎】{nameList}\n每隔 {BossInterval} 回合下一个登场，全灭即通关！");
         }
 
         // 每档随机不重复地各取一个 Boss，使用游戏种子保证对局复现
