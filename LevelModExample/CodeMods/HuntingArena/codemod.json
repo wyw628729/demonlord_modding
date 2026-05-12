@@ -1,0 +1,5 @@
+{
+  "dll": "HuntingArena.dll",
+  "entryClass": "HuntingArena.Main",
+  "displayName": "大连续狩猎"
+}

@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <LangVersion>9</LangVersion>
+        <Nullable>enable</Nullable>
+        <AssemblyName>HuntingArena</AssemblyName>
+        <RootNamespace>HuntingArena</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Reference Include="Assembly-CSharp">
+        <HintPath>..\..\..\..\..\Cardventure\Build\DemonLordJustABlock_Data\Managed\Assembly-CSharp.dll</HintPath>
+      </Reference>
+      <Reference Include="UnityEngine.CoreModule">
+        <HintPath>..\..\..\..\..\Cardventure\Build\DemonLordJustABlock_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
+</Project>
