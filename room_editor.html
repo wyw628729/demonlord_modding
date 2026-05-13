@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Cardventure 房间底图编辑器</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -22,7 +22,9 @@
   --transition:all .2s cubic-bezier(.4,0,.2,1);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:var(--font-ui);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+html{height:100%;background:var(--bg)}
+body{background:var(--bg);color:var(--text);font-family:var(--font-ui);height:100vh;min-height:100dvh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit}
 
 /* ── Toolbar ── */
 .toolbar{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
@@ -65,7 +67,7 @@ label{font-size:11px;color:var(--text2);white-space:nowrap;display:inline-flex;a
 /* ── Canvas Area ── */
 .canvas-area{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;position:relative;background:repeating-conic-gradient(var(--surface) 0% 25%,var(--bg) 0% 50%) 0 0/20px 20px}
 .grid-container{position:relative}
-.grid-container canvas{image-rendering:pixelated;cursor:crosshair}
+.grid-container canvas{image-rendering:pixelated;cursor:crosshair;touch-action:none;display:block}
 
 /* ── Right Panel ── */
 .right-panel{width:250px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
@@ -79,6 +81,7 @@ label{font-size:11px;color:var(--text2);white-space:nowrap;display:inline-flex;a
 .room-item:hover{background:var(--surface2);border-color:var(--border)}
 .room-item.active{background:var(--accent-glow);border-color:var(--accent)}
 .room-item .rid{color:var(--accent);font-weight:600;font-family:var(--font-mono)}
+.room-item span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── Status Bar ── */
 .statusbar{display:flex;align-items:center;gap:16px;padding:4px 14px;background:var(--surface);border-top:1px solid var(--border);font-size:11px;color:var(--text3);flex-shrink:0;font-family:var(--font-mono)}
@@ -109,6 +112,11 @@ label{font-size:11px;color:var(--text2);white-space:nowrap;display:inline-flex;a
 .brush-size-btn{width:28px;height:28px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:11px;font-family:var(--font-mono);display:inline-flex;align-items:center;justify-content:center;transition:var(--transition)}
 .brush-size-btn:hover{background:var(--surface3);color:var(--text)}
 .brush-size-btn.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent);font-weight:600}
+.touch-tools{display:none;align-items:center;gap:4px}
+.touch-mode-btn{width:32px;height:28px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:var(--transition)}
+.touch-mode-btn:hover{background:var(--surface3);color:var(--text)}
+.touch-mode-btn.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent)}
+.touch-mode-btn svg{width:14px;height:14px}
 
 /* ── Quick Buttons ── */
 .quick-btn{width:100%;margin-bottom:3px;font-size:11px;padding:5px 8px;justify-content:flex-start}
@@ -128,6 +136,83 @@ input[type="checkbox"]{accent-color:var(--accent);width:13px;height:13px;cursor:
 
 @media(prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
+}
+
+@media(max-width:900px),(pointer:coarse){
+  body{height:100dvh}
+  .toolbar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:5px;padding:7px max(8px,env(safe-area-inset-right)) 7px max(8px,env(safe-area-inset-left));scrollbar-width:none;overscroll-behavior-x:contain}
+  .toolbar::-webkit-scrollbar{display:none}
+  .toolbar .brand{position:sticky;left:0;z-index:2;margin-right:2px;padding-right:8px;background:var(--surface);font-size:13px}
+  .toolbar .brand svg{width:16px;height:16px}
+  .sep{display:none}
+  .btn{min-height:36px;padding:7px 10px;font-size:12px}
+  .btn svg{width:15px;height:15px}
+  .brush-size-btn,.touch-mode-btn{width:36px;height:36px;font-size:12px;flex:0 0 auto}
+  .touch-tools{display:inline-flex}
+  select,input[type="number"],input[type="text"]{min-height:36px;font-size:16px}
+  input[type="number"]{width:58px}
+  select{min-width:104px}
+  label{font-size:12px}
+
+  .main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) clamp(176px,32dvh,236px);min-height:0;overflow:hidden}
+  .canvas-area{grid-column:1 / -1;grid-row:1;min-height:0;padding:12px;align-items:center;justify-content:center;overscroll-behavior:contain}
+  .grid-container{max-width:100%;max-height:100%}
+
+  .palette-panel{grid-column:1;grid-row:2;width:auto;min-width:0;height:auto;border-right:1px solid var(--border);border-top:1px solid var(--border);flex-shrink:1;overflow:hidden}
+  .palette-panel .panel-header{padding:8px 10px 4px}
+  .palette-search{margin:4px 8px 7px;width:calc(100% - 16px);font-size:16px;min-height:36px}
+  .palette-list{padding:2px 6px 10px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .palette-item{gap:7px;padding:7px 6px;min-height:46px}
+  .palette-swatch{width:34px;height:34px;font-size:12px}
+  .palette-info .name{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .palette-info .desc{display:none}
+  .cat-header{padding:8px 6px 4px;margin-top:4px;font-size:9px}
+
+  .right-panel{grid-column:2;grid-row:2;width:auto;min-width:0;height:auto;border-left:0;border-top:1px solid var(--border);overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .right-panel *{min-width:0}
+  .panel-section{padding:9px 10px}
+  .panel-section h3{margin-bottom:7px}
+  .prop-row{gap:5px;margin-bottom:6px}
+  .prop-row label{min-width:42px;font-size:12px}
+  .room-list{max-height:112px}
+  .room-item{min-height:34px;align-items:center;gap:6px}
+  .layer-tabs{gap:4px}
+  .layer-tab{flex:1;text-align:center;padding:8px 6px;font-size:12px}
+  .quick-btn{min-height:36px;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis}
+  .quick-btn svg{flex:0 0 auto}
+
+  .statusbar{gap:10px;overflow-x:auto;white-space:nowrap;padding:5px max(8px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));font-size:10px;scrollbar-width:none}
+  .statusbar::-webkit-scrollbar{display:none}
+  .statusbar .hint{display:none}
+
+  .modal-overlay{align-items:flex-end;padding:12px max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+  .modal{width:100%;min-width:0;max-width:none;max-height:calc(100dvh - 24px);overflow:auto;padding:16px;border-radius:var(--radius-lg)}
+  .modal textarea{height:min(42dvh,240px);font-size:16px}
+  .modal .actions{gap:8px}
+  .modal .actions .btn{flex:1;justify-content:center}
+}
+
+@media(max-width:900px) and (orientation:landscape){
+  .toolbar{padding-top:5px;padding-bottom:5px}
+  .main{grid-template-columns:176px minmax(0,1fr) 206px;grid-template-rows:minmax(0,1fr)}
+  .palette-panel{grid-column:1;grid-row:1;border-top:0;border-right:1px solid var(--border)}
+  .canvas-area{grid-column:2;grid-row:1;padding:10px}
+  .right-panel{grid-column:3;grid-row:1;border-top:0;border-left:1px solid var(--border)}
+  .statusbar{display:none}
+  .room-list{max-height:92px}
+  .quick-btn{font-size:10px;padding-inline:6px}
+}
+
+@media(max-width:420px){
+  .toolbar .brand{font-size:0;gap:0;padding-right:4px}
+  .toolbar .brand svg{width:18px;height:18px}
+  .btn{padding:7px 9px}
+  .btn svg{margin-right:0}
+  .main{grid-template-rows:minmax(0,1fr) clamp(164px,31dvh,218px)}
+  .panel-section{padding:8px}
+  .prop-row{align-items:stretch;flex-direction:column;gap:3px}
+  .prop-row label{min-width:0;text-align:left}
+  .quick-btn{padding-inline:7px}
 }
 </style>
 </head>
@@ -169,6 +254,17 @@ input[type="checkbox"]{accent-color:var(--accent);width:13px;height:13px;cursor:
   <button class="brush-size-btn active" data-size="1" onclick="setBrush(1)">1</button>
   <button class="brush-size-btn" data-size="3" onclick="setBrush(3)">3</button>
   <button class="brush-size-btn" data-size="5" onclick="setBrush(5)">5</button>
+  <div class="touch-tools" aria-label="触控模式">
+    <button class="touch-mode-btn active" data-mode="paint" onclick="setTouchMode('paint')" aria-label="绘制" data-tip="触控绘制">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 2 4 4L8 20l-6 2 2-6L18 2z"/><path d="m14 6 4 4"/></svg>
+    </button>
+    <button class="touch-mode-btn" data-mode="erase" onclick="setTouchMode('erase')" aria-label="擦除" data-tip="触控擦除">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4-4L16 4a2.8 2.8 0 0 1 4 4L7 21z"/><path d="m14 7 3 3"/><path d="M7 21h10"/></svg>
+    </button>
+    <button class="touch-mode-btn" data-mode="pick" onclick="setTouchMode('pick')" aria-label="拾取" data-tip="触控拾取图块">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-4 11-11"/><path d="m15 6 3-3a2.1 2.1 0 1 1 3 3l-3 3"/><path d="m9 12 3 3"/><path d="m14 7 3 3"/></svg>
+    </button>
+  </div>
   <div class="sep"></div>
   <label>尺寸:</label>
   <input type="number" id="gridCols" value="11" min="3" max="30" onchange="resizeGrid()">x
@@ -355,8 +451,9 @@ const CATS = [
 // STATE
 // ============================================================
 let curRoom = null, rooms = [], curLayer = 'terrain';
-let selTile = 99, brushSz = 1, cellSz = 40;
-let painting = false, paintBtn = 0;
+let selTile = 99, brushSz = 1, cellSz = 40, desktopCellSz = 40;
+let painting = false, paintBtn = 0, activePointerId = null, activePaintMode = null;
+let touchMode = 'paint';
 let hx = -1, hy = -1;
 let undos = [], redos = [];
 const MAX_UNDO = 50;
@@ -447,9 +544,30 @@ function switchLayer(l){
 // ============================================================
 const cvs = document.getElementById('gridCanvas');
 const ctx = cvs.getContext('2d');
+const canvasArea = document.getElementById('canvasArea');
+const coarsePointer = window.matchMedia('(pointer: coarse)');
+
+function isMobileLayout(){
+  return window.matchMedia('(max-width: 900px)').matches || coarsePointer.matches;
+}
+
+function syncCanvasScale(){
+  if(!curRoom) return;
+  if(isMobileLayout()){
+    const rect = canvasArea.getBoundingClientRect();
+    const pad = 24;
+    const availW = Math.max(160, rect.width - pad);
+    const availH = Math.max(160, rect.height - pad);
+    const fit = Math.floor(Math.min(availW / curRoom.cols, availH / curRoom.rows));
+    cellSz = Math.max(18, Math.min(56, fit || 32));
+  } else {
+    cellSz = desktopCellSz;
+  }
+}
 
 function render(){
-  if(!curRoom){ ctx.clearRect(0,0,cvs.width,cvs.height); return; }
+  if(!curRoom){ ctx.clearRect(0,0,cvs.width,cvs.height); cvs.removeAttribute('width'); cvs.removeAttribute('height'); return; }
+  syncCanvasScale();
   const {cols,rows,terrain,objects} = curRoom;
   cvs.width = cols*cellSz; cvs.height = rows*cellSz;
 
@@ -505,11 +623,21 @@ function drawCell(x,y,tile,alpha=1){
 }
 
 // ============================================================
-// MOUSE
+// POINTER INPUT
 // ============================================================
 function cell(e){
   const r=cvs.getBoundingClientRect();
   return {x:Math.floor((e.clientX-r.left)/cellSz), y:Math.floor((e.clientY-r.top)/cellSz)};
+}
+
+function updateStatusAt(x,y){
+  hx=x; hy=y;
+  if(curRoom&&x>=0&&x<curRoom.cols&&y>=0&&y<curRoom.rows){
+    const v=curLayer==='terrain'?curRoom.terrain[y][x]:curRoom.objects[y][x];
+    const t=TILE_MAP[v];
+    document.getElementById('sCoord').textContent=`${x},${y}`;
+    document.getElementById('sTile').textContent=t?`${t.name}(${v})`:(v===-1?'空':`#${v}`);
+  }
 }
 
 function paint(x,y,erase){
@@ -525,38 +653,75 @@ function paint(x,y,erase){
   render();
 }
 
-cvs.addEventListener('mousedown',e=>{
-  e.preventDefault(); if(!curRoom) return;
-  const{x,y}=cell(e); pushU(); painting=true; paintBtn=e.button;
-  if(e.button===0) paint(x,y,false);
-  else if(e.button===1) pickTile(x,y);
-  else if(e.button===2) paint(x,y,true);
-});
-cvs.addEventListener('mousemove',e=>{
-  const{x,y}=cell(e); hx=x; hy=y;
-  if(curRoom&&x>=0&&x<curRoom.cols&&y>=0&&y<curRoom.rows){
-    const v=curLayer==='terrain'?curRoom.terrain[y][x]:curRoom.objects[y][x];
-    const t=TILE_MAP[v];
-    document.getElementById('sCoord').textContent=`${x},${y}`;
-    document.getElementById('sTile').textContent=t?`${t.name}(${v})`:(v===-1?'空':`#${v}`);
+function setTouchMode(mode){
+  touchMode = mode;
+  document.querySelectorAll('.touch-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+}
+
+function pointerMode(e){
+  if(e.pointerType === 'mouse'){
+    if(e.button === 2) return 'erase';
+    if(e.button === 1) return 'pick';
+    return 'paint';
   }
+  return touchMode;
+}
+
+function stopPainting(){
+  painting=false;
+  activePointerId=null;
+  activePaintMode=null;
+}
+
+cvs.addEventListener('pointerdown',e=>{
+  e.preventDefault(); if(!curRoom || activePointerId!==null) return;
+  const {x,y}=cell(e);
+  updateStatusAt(x,y);
+  activePointerId=e.pointerId;
+  activePaintMode=pointerMode(e);
+  cvs.setPointerCapture?.(e.pointerId);
+  if(activePaintMode==='pick'){
+    pickTile(x,y);
+    stopPainting();
+    render();
+    return;
+  }
+  pushU();
+  painting=true;
+  paint(x,y,activePaintMode==='erase');
+});
+cvs.addEventListener('pointermove',e=>{
+  if(activePointerId!==null && e.pointerId!==activePointerId) return;
+  const {x,y}=cell(e);
+  updateStatusAt(x,y);
   if(painting){
-    if(paintBtn===0) paint(x,y,false);
-    else if(paintBtn===2) paint(x,y,true);
+    paint(x,y,activePaintMode==='erase');
+  } else {
+    render();
   }
-  render();
 });
-cvs.addEventListener('mouseup',()=>{painting=false});
-cvs.addEventListener('mouseleave',()=>{painting=false;hx=-1;hy=-1;render()});
+cvs.addEventListener('pointerup',e=>{
+  if(activePointerId!==null && e.pointerId!==activePointerId) return;
+  cvs.releasePointerCapture?.(e.pointerId);
+  stopPainting();
+});
+cvs.addEventListener('pointercancel',stopPainting);
+cvs.addEventListener('pointerleave',e=>{
+  if(e.pointerType==='mouse'){
+    stopPainting();hx=-1;hy=-1;render();
+  }
+});
 cvs.addEventListener('contextmenu',e=>e.preventDefault());
 cvs.addEventListener('wheel',e=>{
   e.preventDefault();
-  cellSz=Math.max(16,Math.min(80,cellSz-Math.sign(e.deltaY)*4));
+  desktopCellSz=Math.max(16,Math.min(80,desktopCellSz-Math.sign(e.deltaY)*4));
+  cellSz=desktopCellSz;
   render();
 },{passive:false});
 
 function pickTile(x,y){
   if(!curRoom) return;
+  if(x<0||x>=curRoom.cols||y<0||y>=curRoom.rows) return;
   const v=curLayer==='terrain'?curRoom.terrain[y][x]:curRoom.objects[y][x];
   if(TILE_MAP[v]) selTileFn(v);
 }
@@ -865,6 +1030,10 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Tab'){e.preventDefault();switchLayer(curLayer==='terrain'?'objects':'terrain');}
   else if(e.key==='Delete')clearAll();
 });
+
+window.addEventListener('resize',render);
+window.visualViewport?.addEventListener('resize',render);
+new ResizeObserver(()=>render()).observe(canvasArea);
 
 // ============================================================
 // INIT
